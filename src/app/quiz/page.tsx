@@ -668,7 +668,7 @@ const QuizPage = () => {
                     <div style={{
                       position: 'relative',
                       width: '100%',
-                      height: '80px',
+                      height: '100px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -681,10 +681,12 @@ const QuizPage = () => {
                         width: '100%',
                         height: '4px',
                         backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                        borderRadius: '2px'
+                        borderRadius: '2px',
+                        top: '50%',
+                        transform: 'translateY(-50%)'
                       }}></div>
 
-                      {/* Correct year marker - always on top */}
+                      {/* Correct year marker - on top */}
                       <div style={{
                         position: 'absolute',
                         top: '0',
@@ -702,40 +704,71 @@ const QuizPage = () => {
                         }}>
                           {currentQuestion.correct_year}
                         </div>
-                        <div style={{
-                          width: '16px',
-                          height: '16px',
-                          backgroundColor: '#fff',
-                          borderRadius: '50%'
-                        }}></div>
                       </div>
 
-                      {/* Guessed year marker - always on bottom */}
+                      {/* Correct year circle - on the line */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR),
+                        transform: 'translate(-50%, -50%)',
+                        width: '16px',
+                        height: '16px',
+                        backgroundColor: '#fff',
+                        borderRadius: '50%',
+                        zIndex: 2
+                      }}></div>
+
+                      {/* Guessed year marker - on bottom */}
                       {userGuessFeedback.guessedYear !== currentQuestion.correct_year && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '0',
-                          left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
-                          transform: 'translateX(-50%)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center'
-                        }}>
+                        <>
                           <div style={{
+                            position: 'absolute',
+                            bottom: '0',
+                            left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
+                            transform: 'translateX(-50%)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                          }}>
+                            <div style={{
+                              fontSize: '18px',
+                              fontWeight: 'bold',
+                              color: '#b48ee6',
+                              marginTop: '8px'
+                            }}>
+                              {userGuessFeedback.guessedYear}
+                            </div>
+                          </div>
+
+                          {/* Guessed year circle - on the line */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
+                            transform: 'translate(-50%, -50%)',
                             width: '16px',
                             height: '16px',
                             backgroundColor: '#b48ee6',
                             borderRadius: '50%',
-                            marginBottom: '8px'
+                            zIndex: 2
                           }}></div>
+
+                          {/* Line showing the difference between years */}
                           <div style={{
-                            fontSize: '18px',
-                            fontWeight: 'bold',
-                            color: '#b48ee6'
-                          }}>
-                            {userGuessFeedback.guessedYear}
-                          </div>
-                        </div>
+                            position: 'absolute',
+                            top: '50%',
+                            left: calculateTimelinePosition(Math.min(userGuessFeedback.guessedYear, currentQuestion.correct_year), MIN_YEAR, MAX_YEAR),
+                            width: `${Math.abs(
+                              parseFloat(calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR)) -
+                              parseFloat(calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR))
+                            )}%`,
+                            height: '4px',
+                            backgroundColor: 'rgba(180, 142, 230, 0.7)',
+                            transform: 'translateY(-50%)',
+                            zIndex: 1
+                          }}></div>
+                        </>
                       )}
                     </div>
 
@@ -759,9 +792,9 @@ const QuizPage = () => {
                         color: 'rgba(255, 255, 255, 0.8)',
                         marginBottom: '15px'
                       }}>
-    
-    
-    {Math.abs(userGuessFeedback.yearDifference)} ÅR {userGuessFeedback.yearDifference > 0 ? 'FÖR TIDIGT' : userGuessFeedback.yearDifference < 0 ? 'FÖR SENT' : 'RÄTT'}! {userGuessFeedback.isCorrect ? '🎯' : '😮'}
+
+
+    {userGuessFeedback.isCorrect ? 'RÄTT! 🎯' : `${Math.abs(userGuessFeedback.yearDifference)} ÅRS SKILLNAD 😮`}
                   </div>
 
                       <div style={{
