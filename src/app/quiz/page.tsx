@@ -3,28 +3,28 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Confetti from 'react-confetti';
-import YouTube from 'react-youtube';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import MobileSlider from '../../components/MobileSlider';
-import { getYouTubeThumbnailUrl } from '../../utils/youtube';
+import { searchDeezerTrack, getDeezerAlbumCover, getDeezerPreviewUrl, getYouTubeFallbackThumbnail } from '../../utils/deezer';
 
 interface Question {
   id: string;
   title: string;
   artist: string;
   correct_year: number;
-  youtube_video_id: string;
+  youtube_video_id: string; // We'll keep using this ID from the database
   trivia: string;
   quiz_date?: string;
-  // image_url is no longer needed as we'll use YouTube thumbnails
+  // Added Deezer-related fields
+  deezerTrack?: any; // Store the Deezer track object
 }
 
 interface RoundResult {
   questionId: string;
   title: string;
   artist: string;
-  youtubeVideoId: string; // Store YouTube video ID instead of image URL
+  youtubeVideoId: string; // Keep this for backward compatibility
   correctYear: number;
   guessedYear: number;
   points: number;
@@ -49,14 +49,15 @@ const QuizPage = () => {
   const [gameState, setGameState] = useState<GameState>('loading');
   const [userGuessFeedback, setUserGuessFeedback] = useState<{ guessedYear: number; isCorrect: boolean; yearDifference: number; points: number; } | null>(null);
   const [score, setScore] = useState<number>(0);
-  const [isYouTubeReady, setIsYouTubeReady] = useState<boolean>(false);
-  const [isYouTubePlaying, setIsYouTubePlaying] = useState<boolean>(false);
+  const [isAudioReady, setIsAudioReady] = useState<boolean>(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
   const [windowSize, setWindowSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
   const [hasInteractedWithSlider, setHasInteractedWithSlider] = useState<boolean>(false);
+  const [deezerTracks, setDeezerTracks] = useState<Record<string, any>>({});
 
-  const playerRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   useEffect(() => {
@@ -126,24 +127,56 @@ const QuizPage = () => {
 
   useEffect(() => {
     if ((gameState === 'preparing' || gameState === 'guessing') && allQuestions.length > 0 && currentQuestionIndex < allQuestions.length) {
-      setCurrentQuestion(allQuestions[currentQuestionIndex]);
+      const question = allQuestions[currentQuestionIndex];
+      setCurrentQuestion(question);
       // Sätt ett initialt värde i mitten av tidslinjen
       setSelectedYear(1960);
       setYearDigits(['', '', '', '']);
       setUserGuessFeedback(null);
       setShowConfetti(false);
-      setIsYouTubeReady(false);
-      setIsYouTubePlaying(false);
+      setIsAudioReady(false);
+      setIsAudioPlaying(false);
       setHasInteractedWithSlider(false);
 
-      // Reset player state when changing questions
-      if (playerRef.current && typeof playerRef.current.stopVideo === 'function') {
+      // Reset audio player when changing questions
+      if (audioRef.current) {
         try {
-          playerRef.current.stopVideo();
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
         } catch (error) {
-          console.error("Error stopping YouTube video:", error);
+          console.error("Error stopping audio:", error);
         }
       }
+
+      // Fetch Deezer track if not already fetched
+      const fetchDeezerTrack = async () => {
+        try {
+          // Search for the track on Deezer
+          const deezerTrack = await searchDeezerTrack(
+            question.artist,
+            question.title,
+            question.youtube_video_id
+          );
+
+          if (deezerTrack) {
+            // Update the question with Deezer track info
+            const updatedQuestion = { ...question, deezerTrack };
+
+            // Update the current question with Deezer data
+            setCurrentQuestion(updatedQuestion);
+
+            // Update the deezer tracks cache
+            setDeezerTracks(prev => ({
+              ...prev,
+              [question.id]: deezerTrack
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching Deezer track:", error);
+        }
+      };
+
+      fetchDeezerTrack();
     }
   }, [currentQuestionIndex, allQuestions, gameState]);
 
@@ -180,12 +213,12 @@ const QuizPage = () => {
     if (!currentQuestion) return;
 
     try {
-      // Safely pause the video if player exists and is ready
-      if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
-        playerRef.current.pauseVideo();
+      // Safely pause the audio if it's playing
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     } catch (error) {
-      console.error("Error pausing YouTube video:", error);
+      console.error("Error pausing audio:", error);
       // Continue with the function even if there's an error with the player
     }
 
@@ -257,12 +290,13 @@ const QuizPage = () => {
 
   const handleNextSong = () => {
     try {
-      // Safely stop the video if player exists and is ready
-      if (playerRef.current && typeof playerRef.current.stopVideo === 'function') {
-        playerRef.current.stopVideo();
+      // Safely stop the audio if it's playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
     } catch (error) {
-      console.error("Error stopping YouTube video:", error);
+      console.error("Error stopping audio:", error);
       // Continue with the function even if there's an error with the player
     }
 
@@ -309,74 +343,72 @@ const QuizPage = () => {
   const handleViewLeaderboard = () => router.push('/leaderboard');
   const handleViewInstructions = () => router.push('/instructions');
 
-  const onPlayerReady = (event: any) => {
+  const handleAudioReady = () => {
     try {
-      playerRef.current = event.target;
-      setIsYouTubeReady(true);
+      setIsAudioReady(true);
 
-      // Start playing the video when it's ready
-      if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
-        // Try to unmute first (important for autoplay)
-        if (typeof playerRef.current.unMute === 'function') {
-          playerRef.current.unMute();
-        }
-
+      // Try to play the audio
+      if (audioRef.current) {
         // Set volume to high
-        if (typeof playerRef.current.setVolume === 'function') {
-          playerRef.current.setVolume(100);
-        }
+        audioRef.current.volume = 1.0;
 
-        // Try to play the video
-        playerRef.current.playVideo();
+        // Play the audio
+        const playPromise = audioRef.current.play();
 
-        // Check if video is actually playing
-        const checkPlayingInterval = setInterval(() => {
-          if (!playerRef.current) {
-            clearInterval(checkPlayingInterval);
-            return;
-          }
-
-          if (typeof playerRef.current.getPlayerState === 'function') {
-            const playerState = playerRef.current.getPlayerState();
-
-            // If video is playing (state 1)
-            if (playerState === 1) {
-              setIsYouTubePlaying(true);
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              // Audio is playing
+              setIsAudioPlaying(true);
 
               // If we're in preparing state, move to guessing state
               if (gameState === 'preparing') {
                 setGameState('guessing');
-                // Ta bort denna rad som sätter fokus på inputfältet
-                // if (inputRefs[0].current) inputRefs[0].current.focus();
               }
+            })
+            .catch(error => {
+              console.error("Error playing audio:", error);
+              // If autoplay is blocked, we'll need user interaction
+              // The play button in the UI will handle this
+            });
+        }
 
-              clearInterval(checkPlayingInterval);
-            }
-          }
-        }, 300);
-
-        // Clear interval after 10 seconds to prevent memory leaks
-        // Also move to guessing state if still in preparing after timeout
+        // Set a timeout to move to guessing state even if audio fails to play
         setTimeout(() => {
-          clearInterval(checkPlayingInterval);
           if (gameState === 'preparing') {
-            console.warn("Timeout waiting for YouTube player, moving to guessing state");
+            console.warn("Timeout waiting for audio to play, moving to guessing state");
             setGameState('guessing');
-            // Ta bort denna rad som sätter fokus på inputfältet
-            // if (inputRefs[0].current) inputRefs[0].current.focus();
           }
-        }, 5000);
+        }, 3000);
       }
     } catch (error) {
-      console.error("Error initializing YouTube player:", error);
+      console.error("Error initializing audio player:", error);
       // If there's an error, still move to guessing state after a delay
       if (gameState === 'preparing') {
         setTimeout(() => {
           setGameState('guessing');
-          // Ta bort denna rad som sätter fokus på inputfältet
-          // if (inputRefs[0].current) inputRefs[0].current.focus();
         }, 1000);
       }
+    }
+  };
+
+  const handleAudioPlay = () => {
+    setIsAudioPlaying(true);
+    if (gameState === 'preparing') {
+      setGameState('guessing');
+    }
+  };
+
+  const handleAudioPause = () => {
+    setIsAudioPlaying(false);
+  };
+
+  const handleAudioEnded = () => {
+    setIsAudioPlaying(false);
+    // Optionally loop the audio
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => console.error("Error replaying audio:", e));
     }
   };
 
@@ -433,49 +465,17 @@ const QuizPage = () => {
   return (
      <div style={pageStyle}>
        {showConfetti && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={200} />}
-       {(gameState === 'preparing' || gameState === 'guessing') && currentQuestion && currentQuestion.youtube_video_id && (
-         <div style={{
-           position: 'absolute',
-           bottom: '0',
-           right: '0',
-           opacity: 0,
-           pointerEvents: 'none',
-           width: '1px',
-           height: '1px',
-           overflow: 'hidden'
-         }}>
-           <YouTube
-             videoId={currentQuestion.youtube_video_id}
-             opts={{
-               height: '1',
-               width: '1',
-               playerVars: {
-                 autoplay: 1,
-                 controls: 0,
-                 showinfo: 0,
-                 rel: 0,
-                 modestbranding: 1,
-                 origin: window.location.origin,
-                 enablejsapi: 1,
-                 mute: 0, // Ensure not muted
-                 playsinline: 1 // Important for mobile
-               }
-             }}
-             onReady={onPlayerReady}
-             onStateChange={(event) => {
-               // Check if video is playing (state 1)
-               if (event.data === 1) {
-                 setIsYouTubePlaying(true);
-                 // If we're in preparing state, move to guessing state
-                 if (gameState === 'preparing') {
-                   setGameState('guessing');
-                   // Ta bort denna rad som sätter fokus på inputfältet
-                   // if (inputRefs[0].current) inputRefs[0].current.focus();
-                 }
-               }
-             }}
-           />
-         </div>
+       {(gameState === 'preparing' || gameState === 'guessing') && currentQuestion && currentQuestion.deezerTrack && (
+         <audio
+           ref={audioRef}
+           src={getDeezerPreviewUrl(currentQuestion.deezerTrack)}
+           preload="auto"
+           onCanPlayThrough={handleAudioReady}
+           onPlay={handleAudioPlay}
+           onPause={handleAudioPause}
+           onEnded={handleAudioEnded}
+           style={{ display: 'none' }}
+         />
        )}
        <header style={headerStyle}> <div style={logoStyle}>Maestro</div> <div style={scoreStyle}>Score: {score}</div> <div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div> </header>
        <main style={mainContentStyle}>
@@ -511,7 +511,9 @@ const QuizPage = () => {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      backgroundImage: `url(${getYouTubeThumbnailUrl(currentQuestion.youtube_video_id, 'high')})`,
+                      backgroundImage: `url(${currentQuestion.deezerTrack ?
+                        getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+                        getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       filter: 'blur(10px)',
@@ -534,19 +536,24 @@ const QuizPage = () => {
                     {/* Play button to help with autoplay restrictions */}
                     <button
                       onClick={() => {
-                        // Try to play the video when user clicks
-                        if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
-                          // Unmute and play
-                          if (typeof playerRef.current.unMute === 'function') {
-                            playerRef.current.unMute();
-                          }
-                          playerRef.current.playVideo();
+                        // Try to play the audio when user clicks
+                        if (audioRef.current) {
+                          // Play the audio
+                          audioRef.current.play()
+                            .then(() => {
+                              setIsAudioPlaying(true);
 
-                          // Move to guessing state after a short delay
-                          setTimeout(() => {
-                            setGameState('guessing');
-                            if (inputRefs[0].current) inputRefs[0].current.focus();
-                          }, 500);
+                              // Move to guessing state after a short delay
+                              setTimeout(() => {
+                                setGameState('guessing');
+                                if (inputRefs[0].current) inputRefs[0].current.focus();
+                              }, 500);
+                            })
+                            .catch(error => {
+                              console.error("Error playing audio:", error);
+                              // Still move to guessing state even if audio fails
+                              setGameState('guessing');
+                            });
                         }
                       }}
                       style={{
@@ -607,8 +614,10 @@ const QuizPage = () => {
               ) : (
                 <div style={artworkContainerStyle}>
                   <img
-                    src={getYouTubeThumbnailUrl(currentQuestion.youtube_video_id, 'high')}
-                    alt={`Thumbnail for ${currentQuestion.title}`}
+                    src={currentQuestion.deezerTrack ?
+                      getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+                      getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
+                    alt={`Album cover for ${currentQuestion.title}`}
                     style={artworkStyle}
                   />
                 </div>

@@ -4,7 +4,7 @@
 import React, { useEffect, useState, Suspense, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { submitScoreAction } from '../actions';
-import { getYouTubeThumbnailUrl } from '../../utils/youtube';
+import { getYouTubeFallbackThumbnail } from '../../utils/deezer';
 
 interface RoundResult {
   questionId: string;
@@ -126,7 +126,7 @@ const ResultsContent = () => {
                 <ul style={recapListStyle}>
                     {roundRecaps.map((round, index) => (
                         <li key={round.questionId || index} style={recapItemStyle}>
-                            <img src={getYouTubeThumbnailUrl(round.youtubeVideoId)} alt={`Thumbnail for ${round.title}`} style={recapImageStyle} />
+                            <img src={getYouTubeFallbackThumbnail(round.youtubeVideoId)} alt={`Album cover for ${round.title}`} style={recapImageStyle} />
                             <div style={recapInfoStyle}> <p style={{...recapDetailStyle, fontWeight:'bold'}}>Runda {index + 1}: {round.title}</p> <p style={recapDetailStyle}>Rätt: {round.correctYear} | Din gissning: {round.guessedYear}</p> </div>
                             <span style={recapPointsStyle}>+{round.points}p</span>
                         </li>
