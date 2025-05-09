@@ -759,9 +759,12 @@ const QuizPage = () => {
                         color: 'rgba(255, 255, 255, 0.8)',
                         marginBottom: '15px'
                       }}>
-{userGuessFeedback.yearDifference !== 0 ?
-    `${Math.abs(userGuessFeedback.yearDifference)} ÅR ${userGuessFeedback.yearDifference > 0 ? 'FÖR TIDIGT' : 'FÖR SENT'}!` :
-    'RÄTT!'} {userGuessFeedback.isCorrect ? '🎯' : '😮'}                      </div>
+    
+    
+    {userGuessFeedback.isCorrect ? 'RÄTT! 🎯' : 
+    `${Math.abs(userGuessFeedback.yearDifference)} ÅR ${userGuessFeedback.yearDifference > 0 ? 'FÖR SENT' : 'FÖR TIDIGT'}! 😮`}
+
+                  </div>
 
                       <div style={{
                         fontSize: '24px',
