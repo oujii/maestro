@@ -17,7 +17,15 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        // Använd Promise.allSettled istället för cache.addAll för att hantera fel bättre
+        return Promise.allSettled(
+          urlsToCache.map(url =>
+            cache.add(url).catch(error => {
+              console.warn(`Failed to cache ${url}: ${error.message}`);
+              return Promise.resolve(); // Fortsätt trots fel
+            })
+          )
+        );
       })
   );
 });

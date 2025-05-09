@@ -23,7 +23,7 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
   try {
     // Create search query - combine artist and title for better results
     const query = `${artist} ${title}`;
-    
+
     // Make API request to Deezer via RapidAPI
     const response = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(query)}`, {
       method: 'GET',
@@ -38,13 +38,40 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
     }
 
     const data = await response.json();
-    
+
     // Get the first track from results
     const track = data.data && data.data.length > 0 ? data.data[0] : null;
-    
+
+    if (!track) {
+      // Om ingen träff, försök med bara artist eller bara titel
+      console.warn(`No results for "${query}", trying with just artist name`);
+
+      // Försök med bara artistnamnet
+      const artistResponse = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(artist)}`, {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
+          'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
+        }
+      });
+
+      if (artistResponse.ok) {
+        const artistData = await artistResponse.json();
+        if (artistData.data && artistData.data.length > 0) {
+          // Hittade en låt av artisten, använd den
+          const artistTrack = artistData.data[0];
+          console.log(`Found track by artist: ${artistTrack.title}`);
+
+          // Cache the result
+          searchCache[cacheKey] = artistTrack;
+          return artistTrack;
+        }
+      }
+    }
+
     // Cache the result
     searchCache[cacheKey] = track;
-    
+
     return track;
   } catch (error) {
     console.error('Error searching Deezer track:', error);
@@ -78,10 +105,10 @@ export async function getDeezerTrack(trackId: string): Promise<any> {
     }
 
     const track = await response.json();
-    
+
     // Cache the result
     trackCache[trackId] = track;
-    
+
     return track;
   } catch (error) {
     console.error('Error getting Deezer track:', error);
@@ -97,7 +124,7 @@ export async function getDeezerTrack(trackId: string): Promise<any> {
  */
 export function getDeezerAlbumCover(track: any, size: 'small' | 'medium' | 'big' | 'xl' = 'big'): string {
   if (!track || !track.album) return '';
-  
+
   switch (size) {
     case 'small':
       return track.album.cover_small || '';
@@ -129,7 +156,7 @@ export function getDeezerPreviewUrl(track: any): string {
  */
 export function getYouTubeFallbackThumbnail(youtubeId: string, quality: 'default' | 'medium' | 'high' | 'standard' | 'maxres' = 'high'): string {
   if (!youtubeId) return '';
-  
+
   switch (quality) {
     case 'default':
       return `https://img.youtube.com/vi/${youtubeId}/default.jpg`;

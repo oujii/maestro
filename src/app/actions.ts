@@ -18,7 +18,7 @@ export async function submitScoreAction(name: string, score: number): Promise<{ 
 
     return {
       success: true,
-      message: 'Poäng skickad till topplistan!'
+      message: 'Poäng skickad till topplistan! Du kan se din placering genom att klicka på 🏆-ikonen.'
     };
   } catch (error: any) {
     console.error('Server Action error:', error);

@@ -64,7 +64,8 @@ const ResultsContent = () => {
       if (result.success) {
         setTimeout(() => {
           closeSubmitModal();
-          router.push('/leaderboard');
+          // Ta bort omdirigeringen till leaderboard
+          // Stäng bara modalen och stanna kvar på resultatvyn
         }, 2000);
       }
     });
@@ -126,7 +127,11 @@ const ResultsContent = () => {
                 <ul style={recapListStyle}>
                     {roundRecaps.map((round, index) => (
                         <li key={round.questionId || index} style={recapItemStyle}>
-                            <img src={getYouTubeFallbackThumbnail(round.youtubeVideoId)} alt={`Album cover for ${round.title}`} style={recapImageStyle} />
+                            <img
+                              src={getYouTubeFallbackThumbnail(round.youtubeVideoId, 'high')}
+                              alt={`Album cover for ${round.title}`}
+                              style={recapImageStyle}
+                            />
                             <div style={recapInfoStyle}> <p style={{...recapDetailStyle, fontWeight:'bold'}}>Runda {index + 1}: {round.title}</p> <p style={recapDetailStyle}>Rätt: {round.correctYear} | Din gissning: {round.guessedYear}</p> </div>
                             <span style={recapPointsStyle}>+{round.points}p</span>
                         </li>

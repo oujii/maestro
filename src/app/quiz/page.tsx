@@ -347,40 +347,20 @@ const QuizPage = () => {
     try {
       setIsAudioReady(true);
 
-      // Try to play the audio
-      if (audioRef.current) {
-        // Set volume to high
-        audioRef.current.volume = 1.0;
+      // Vi försöker inte spela upp ljud automatiskt längre
+      // eftersom de flesta webbläsare blockerar autoplay utan användarinteraktion
 
-        // Play the audio
-        const playPromise = audioRef.current.play();
+      // Istället låter vi användaren klicka på play-knappen
+      // och visar bara att ljudet är redo att spelas upp
 
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              // Audio is playing
-              setIsAudioPlaying(true);
-
-              // If we're in preparing state, move to guessing state
-              if (gameState === 'preparing') {
-                setGameState('guessing');
-              }
-            })
-            .catch(error => {
-              console.error("Error playing audio:", error);
-              // If autoplay is blocked, we'll need user interaction
-              // The play button in the UI will handle this
-            });
+      // Om vi är i preparing-läge, väntar vi på användarinteraktion
+      // men sätter en timeout för att gå vidare om användaren inte interagerar
+      setTimeout(() => {
+        if (gameState === 'preparing') {
+          console.warn("Timeout waiting for user interaction, moving to guessing state");
+          setGameState('guessing');
         }
-
-        // Set a timeout to move to guessing state even if audio fails to play
-        setTimeout(() => {
-          if (gameState === 'preparing') {
-            console.warn("Timeout waiting for audio to play, moving to guessing state");
-            setGameState('guessing');
-          }
-        }, 3000);
-      }
+      }, 5000);
     } catch (error) {
       console.error("Error initializing audio player:", error);
       // If there's an error, still move to guessing state after a delay
@@ -538,9 +518,16 @@ const QuizPage = () => {
                       onClick={() => {
                         // Try to play the audio when user clicks
                         if (audioRef.current) {
-                          // Play the audio
+                          // Mute audio first (to increase chances of successful autoplay)
+                          audioRef.current.muted = true;
+
+                          // Try to play muted first
                           audioRef.current.play()
                             .then(() => {
+                              // If successful, unmute and continue playing
+                              if (audioRef.current) {
+                                audioRef.current.muted = false;
+                              }
                               setIsAudioPlaying(true);
 
                               // Move to guessing state after a short delay
@@ -550,10 +537,29 @@ const QuizPage = () => {
                               }, 500);
                             })
                             .catch(error => {
-                              console.error("Error playing audio:", error);
-                              // Still move to guessing state even if audio fails
-                              setGameState('guessing');
+                              console.error("Error playing audio (first attempt):", error);
+
+                              // Try again with user interaction
+                              if (audioRef.current) {
+                                audioRef.current.muted = false;
+                                audioRef.current.play()
+                                  .then(() => {
+                                    setIsAudioPlaying(true);
+                                    setTimeout(() => setGameState('guessing'), 500);
+                                  })
+                                  .catch(error => {
+                                    console.error("Error playing audio (second attempt):", error);
+                                    // Still move to guessing state even if audio fails
+                                    setGameState('guessing');
+                                  });
+                              } else {
+                                // No audio ref anymore, just move to guessing state
+                                setGameState('guessing');
+                              }
                             });
+                        } else {
+                          // No audio ref, just move to guessing state
+                          setGameState('guessing');
                         }
                       }}
                       style={{
@@ -572,7 +578,7 @@ const QuizPage = () => {
                         zIndex: 2
                       }}
                     >
-                      <span style={{ marginRight: '8px' }}>▶</span> Spela musik
+                      <span style={{ marginRight: '8px' }}>▶</span> Klicka för att spela musik
                     </button>
 
                     <style jsx>{`
