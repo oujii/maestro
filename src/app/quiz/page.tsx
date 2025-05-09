@@ -339,7 +339,7 @@ const QuizPage = () => {
           if (typeof playerRef.current.getPlayerState === 'function') {
             const playerState = playerRef.current.getPlayerState();
 
-            // If video is playing (state 1)
+            // If video is playing (state 1) hehe
             if (playerState === 1) {
               setIsYouTubePlaying(true);
 
