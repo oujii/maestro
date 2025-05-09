@@ -352,7 +352,6 @@ const QuizPage = () => {
 
               clearInterval(checkPlayingInterval);
             }
-            // Om andra tillstånd...
         }, 300);
 
         // Clear interval after 10 seconds to prevent memory leaks
@@ -362,7 +361,8 @@ const QuizPage = () => {
           if (gameState === 'preparing') {
             console.warn("Timeout waiting for YouTube player, moving to guessing state");
             setGameState('guessing');
-            if (inputRefs[0].current) inputRefs[0].current.focus();
+            // Ta bort denna rad som sätter fokus på inputfältet
+            // if (inputRefs[0].current) inputRefs[0].current.focus();
           }
         }, 5000);
       }
@@ -372,7 +372,8 @@ const QuizPage = () => {
       if (gameState === 'preparing') {
         setTimeout(() => {
           setGameState('guessing');
-          if (inputRefs[0].current) inputRefs[0].current.focus();
+          // Ta bort denna rad som sätter fokus på inputfältet
+          // if (inputRefs[0].current) inputRefs[0].current.focus();
         }, 1000);
       }
     }
