@@ -352,6 +352,7 @@ const QuizPage = () => {
 
               clearInterval(checkPlayingInterval);
             }
+          }
         }, 300);
 
         // Clear interval after 10 seconds to prevent memory leaks
@@ -758,8 +759,8 @@ const QuizPage = () => {
                         color: 'rgba(255, 255, 255, 0.8)',
                         marginBottom: '15px'
                       }}>
-{userGuessFeedback.yearDifference !== 0 ? 
-    `${Math.abs(userGuessFeedback.yearDifference)} ÅR ${userGuessFeedback.yearDifference > 0 ? 'FÖR TIDIGT' : 'FÖR SENT'}!` : 
+{userGuessFeedback.yearDifference !== 0 ?
+    `${Math.abs(userGuessFeedback.yearDifference)} ÅR ${userGuessFeedback.yearDifference > 0 ? 'FÖR TIDIGT' : 'FÖR SENT'}!` :
     'RÄTT!'} {userGuessFeedback.isCorrect ? '🎯' : '😮'}                      </div>
 
                       <div style={{
