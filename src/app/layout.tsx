@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,10 +15,24 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#14102c'
+};
+
 export const metadata: Metadata = {
   title: "Maestro Quiz - Testa dina musikkunskaper",
   description: "Gissa vilket år låtarna släpptes och testa dina musikkunskaper i Maestro Quiz. Utmana dig själv och dina vänner!",
   keywords: "musik quiz, musikkunskap, gissa år, låtar, musikhistoria",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Maestro Quiz"
+  },
   openGraph: {
     title: "Maestro Quiz - Testa dina musikkunskaper",
     description: "Gissa vilket år låtarna släpptes och testa dina musikkunskaper i Maestro Quiz. Utmana dig själv och dina vänner!",
@@ -33,15 +48,14 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <meta name="theme-color" content="#14102c" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body
         className={`${inter.variable} ${montserrat.variable} antialiased`}
       >
         {children}
+        <Script src="/sw-register.js" strategy="afterInteractive" />
       </body>
     </html>
   );
