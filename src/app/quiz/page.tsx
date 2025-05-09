@@ -339,36 +339,20 @@ const QuizPage = () => {
           if (typeof playerRef.current.getPlayerState === 'function') {
             const playerState = playerRef.current.getPlayerState();
 
-            // If video is playing (state 1) hehe
+            // If video is playing (state 1)
             if (playerState === 1) {
               setIsYouTubePlaying(true);
 
               // If we're in preparing state, move to guessing state
               if (gameState === 'preparing') {
                 setGameState('guessing');
-                if (inputRefs[0].current) inputRefs[0].current.focus();
+                // Ta bort denna rad som sätter fokus på inputfältet
+                // if (inputRefs[0].current) inputRefs[0].current.focus();
               }
 
               clearInterval(checkPlayingInterval);
             }
-            // If video is paused, cued, or buffering, try to play again
-            else if (playerState === 2 || playerState === 5 || playerState === 3) {
-              if (typeof playerRef.current.playVideo === 'function') {
-                playerRef.current.playVideo();
-              }
-            }
-            // If there's an error (state -1), move to guessing state after a delay
-            else if (playerState === -1) {
-              console.warn("YouTube player error state detected");
-              if (gameState === 'preparing') {
-                setTimeout(() => {
-                  setGameState('guessing');
-                  if (inputRefs[0].current) inputRefs[0].current.focus();
-                }, 1000);
-              }
-              clearInterval(checkPlayingInterval);
-            }
-          }
+            // Om andra tillstånd...
         }, 300);
 
         // Clear interval after 10 seconds to prevent memory leaks
@@ -483,7 +467,8 @@ const QuizPage = () => {
                  // If we're in preparing state, move to guessing state
                  if (gameState === 'preparing') {
                    setGameState('guessing');
-                   if (inputRefs[0].current) inputRefs[0].current.focus();
+                   // Ta bort denna rad som sätter fokus på inputfältet
+                   // if (inputRefs[0].current) inputRefs[0].current.focus();
                  }
                }
              }}
@@ -643,7 +628,7 @@ const QuizPage = () => {
                         onChange={(e) => handleDigitInputChange(index, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(index, e)}
                         style={yearInputStyle}
-                        placeholder={hasInteractedWithSlider ? '' : '_'}
+                        placeholder="" // Ändra från placeholder={hasInteractedWithSlider ? '' : '_'} till bara tom sträng
                       />
                     ))}
                   </div>
