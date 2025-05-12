@@ -1,7 +1,7 @@
 // /Users/carl/Library/Application Support/Claude/maestro/maestro/src/app/quiz/page.tsx
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Confetti from 'react-confetti';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
@@ -56,9 +56,169 @@ const QuizPage = () => {
   const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
   const [hasInteractedWithSlider, setHasInteractedWithSlider] = useState<boolean>(false);
   const [deezerTracks, setDeezerTracks] = useState<Record<string, any>>({});
+  const [isImageLoaded, setIsImageLoaded] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeAudio, setActiveAudio] = useState<HTMLAudioElement | null>(null);
+  const [autoPlayMusic, setAutoPlayMusic] = useState<boolean>(true);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+const initialPlayDoneForIndex = useRef<number | null>(null);
+const prevQuestionIndexRef = useRef<number | null>(null);
+
+// Funktion för att manuellt spela upp musik
+  const playMusic = useCallback((previewUrl: string | null) => {
+    if (!previewUrl) {
+      console.warn("playMusic called without a preview URL.");
+      return;
+    }
+
+    console.log("Playing music with URL:", previewUrl);
+
+    // Stoppa eventuell tidigare musik först
+    if (activeAudio) {
+      // Först ta bort alla event listeners för att undvika callbacks
+      activeAudio.oncanplaythrough = null;
+      activeAudio.onplay = null;
+      activeAudio.onpause = null;
+      activeAudio.onended = null;
+      activeAudio.onerror = null;
+
+      // Pausa uppspelningen
+      activeAudio.pause();
+
+      // Sätt src till en tom blob istället för tom sträng för att undvika felmeddelanden
+      try {
+        // Skapa en tom ljudblob
+        const emptyBlob = new Blob([], { type: 'audio/mp3' });
+        const emptyBlobUrl = URL.createObjectURL(emptyBlob);
+        activeAudio.src = emptyBlobUrl;
+
+        // Frigör blob-URL:en efter att den har använts
+        URL.revokeObjectURL(emptyBlobUrl);
+      } catch (error) {
+        console.warn("Could not create empty blob:", error);
+        // Fallback: sätt src till tom sträng
+        activeAudio.src = "";
+      }
+
+      setActiveAudio(null);
+    }
+
+    // Skapa ett nytt Audio-element
+    const manualAudio = new Audio(previewUrl);
+    manualAudio.volume = 1.0;
+
+    // Lyssna på händelser
+    manualAudio.oncanplaythrough = () => {
+      console.log("Manual audio can play through");
+    };
+
+    manualAudio.onplay = () => {
+      console.log("Manual audio started playing");
+      setIsAudioPlaying(true);
+    };
+
+    manualAudio.onerror = () => {
+      const errorCode = manualAudio.error ? manualAudio.error.code : 'unknown';
+      const errorMessage = manualAudio.error ? manualAudio.error.message : 'unknown error';
+
+      console.error("Manual audio error:", {
+        code: errorCode,
+        message: errorMessage,
+        src: manualAudio.src
+      });
+
+      setIsAudioPlaying(false);
+      setActiveAudio(null);
+    };
+
+    manualAudio.onended = () => {
+      console.log("Manual audio playback ended");
+      setIsAudioPlaying(false);
+    };
+
+    // Spara det nya Audio-objektet i state
+    setActiveAudio(manualAudio);
+
+    // Försök spela upp ljudet
+    try {
+      manualAudio.play()
+        .catch(error => {
+          console.error("Error playing manual audio:", error);
+
+          if (error.name === 'NotAllowedError') {
+            console.log("Playback was prevented due to lack of user interaction");
+
+            // Vi kan inte spela upp ljud automatiskt, men vi kan fortsätta ändå
+            // Användaren får klara sig utan ljud tills de interagerar med sidan
+          }
+
+          setIsAudioPlaying(false);
+          setActiveAudio(null);
+        });
+    } catch (error) {
+      console.error("Exception playing manual audio:", error);
+      setIsAudioPlaying(false);
+      setActiveAudio(null);
+    }
+  }, [activeAudio]); // Removed currentQuestion from dependencies
+  // Läs inställningen för automatisk musikuppspelning från localStorage
+  useEffect(() => {
+    try {
+      const savedAutoPlay = localStorage.getItem('maestroAutoPlayMusic');
+      if (savedAutoPlay !== null) {
+        setAutoPlayMusic(savedAutoPlay === 'true');
+        console.log("Loaded autoplay setting:", savedAutoPlay === 'true');
+      }
+    } catch (error) {
+      console.error("Error reading autoplay setting from localStorage:", error);
+    }
+  }, []);
+
+  // Hjälpfunktion för att testa ljuduppspelning från konsolen
+  useEffect(() => {
+    // Lägg till en global funktion för att testa ljuduppspelning
+    (window as any).testAudio = (url: string) => {
+      console.log("Testing audio playback with URL:", url);
+
+      const testAudio = new Audio(url);
+      testAudio.volume = 1.0;
+
+      testAudio.oncanplaythrough = () => {
+        console.log("Test audio can play through");
+      };
+
+      testAudio.onplay = () => {
+        console.log("Test audio started playing");
+      };
+
+      testAudio.onerror = (e) => {
+        console.error("Test audio error:", e);
+        console.error("Test audio error details:", {
+          error: testAudio.error,
+          src: testAudio.src,
+          readyState: testAudio.readyState,
+          networkState: testAudio.networkState
+        });
+      };
+
+      const playPromise = testAudio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("Test audio playing successfully");
+          })
+          .catch(error => {
+            console.error("Test audio play error:", error);
+          });
+      }
+
+      return "Testing audio playback. Check console for results.";
+    };
+
+    console.log("Du kan testa ljuduppspelning genom att köra window.testAudio(url) i konsolen");
+  }, []);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -127,6 +287,13 @@ const QuizPage = () => {
 
   useEffect(() => {
     if ((gameState === 'preparing' || gameState === 'guessing') && allQuestions.length > 0 && currentQuestionIndex < allQuestions.length) {
+      const hasQuestionIndexChanged = prevQuestionIndexRef.current !== currentQuestionIndex;
+      const isFirstRun = prevQuestionIndexRef.current === null;
+
+      // Sätt laddningsstatus till true när vi börjar ladda en ny fråga
+      setIsLoading(true);
+      setIsImageLoaded(false);
+
       const question = allQuestions[currentQuestionIndex];
       setCurrentQuestion(question);
       // Sätt ett initialt värde i mitten av tidslinjen
@@ -135,22 +302,109 @@ const QuizPage = () => {
       setUserGuessFeedback(null);
       setShowConfetti(false);
       setIsAudioReady(false);
-      setIsAudioPlaying(false);
-      setHasInteractedWithSlider(false);
+      // setIsAudioPlaying(false); // Don't reset this here if we might not stop audio
 
-      // Reset audio player when changing questions
-      if (audioRef.current) {
+      if (hasQuestionIndexChanged || isFirstRun) {
+        setHasInteractedWithSlider(false); // Reset only if question actually changed
+        setIsAudioPlaying(false); // Reset playing state only if question changed
+        // Stoppa all musik när vi byter fråga
         try {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
+          // Stoppa det aktiva ljudet om det finns
+          if (activeAudio) {
+            console.log("Stopping active audio because question index changed or first run.");
+
+            // Först ta bort alla event listeners för att undvika callbacks
+            activeAudio.oncanplaythrough = null;
+            activeAudio.onplay = null;
+            activeAudio.onpause = null;
+            activeAudio.onended = null;
+            activeAudio.onerror = null;
+
+            // Pausa uppspelningen
+            activeAudio.pause();
+
+            // Sätt src till tom sträng för att stoppa och rensa.
+            activeAudio.src = "";
+
+            // Nollställ activeAudio
+            setActiveAudio(null);
+          }
+
+          // Säkerhetskontroll för det inbäddade audio-elementet
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.src = "";
+          }
+          console.log("All audio stopped and resources cleared due to question change or first run.");
         } catch (error) {
           console.error("Error stopping audio:", error);
         }
+      } else {
+        console.log("Question index has not changed, gameState might have. Audio not stopped.");
       }
-
       // Fetch Deezer track if not already fetched
       const fetchDeezerTrack = async () => {
         try {
+          // Check if we already have this track in cache
+          if (deezerTracks[question.id]) {
+            console.log(`Using cached Deezer track for ${question.title}`);
+            const updatedQuestion = { ...question, deezerTrack: deezerTracks[question.id] };
+            setCurrentQuestion(updatedQuestion);
+
+            // Förladda bilden även om vi använder cache
+            if (deezerTracks[question.id].album && deezerTracks[question.id].album.cover_big) {
+              const img = new Image();
+              img.onload = () => {
+                console.log(`Album image loaded from cache for ${question.title}`);
+                setIsImageLoaded(true);
+                setIsLoading(false);
+                if (gameState === 'preparing') {
+                  console.log("Image loaded (cache), moving from preparing to guessing state.");
+                  setGameState('guessing');
+                }
+
+                // Logik för att avgöra om musik ska spelas
+                const playNextSongFlag = sessionStorage.getItem('playNextSong') === 'true';
+                let playThisTime = false;
+
+                if (playNextSongFlag) {
+                  // Scenario B: User clicked "Next Song"
+                  console.log("img.onload (Cache): Play because 'Next Song' was clicked.");
+                  playThisTime = true;
+                  sessionStorage.removeItem('playNextSong');
+                  initialPlayDoneForIndex.current = currentQuestionIndex; // Mark as played for this index via "Next Song"
+                } else if (autoPlayMusic && initialPlayDoneForIndex.current !== currentQuestionIndex) {
+                  // Scenario A (First question) or C (Resuming quiz) with autoplay enabled,
+                  // AND initial play has not been done for THIS specific index yet.
+                  console.log(`img.onload (Cache): Autoplay is on. Current index: ${currentQuestionIndex}. Initial play for this index not done yet.`);
+                  playThisTime = true;
+                  initialPlayDoneForIndex.current = currentQuestionIndex; // Mark as played for this index
+                }
+
+                if (playThisTime && updatedQuestion.deezerTrack?.preview) {
+                  playMusic(updatedQuestion.deezerTrack?.preview);
+                } else if (playThisTime) {
+                  console.log("img.onload (Cache): Decided to play, but no preview URL.");
+                }
+              };
+              img.onerror = () => {
+                console.warn(`Failed to load cached album image for ${question.title}`);
+                setIsImageLoaded(false);
+                setIsLoading(false);
+              };
+              img.src = deezerTracks[question.id].album.cover_big;
+            } else {
+              // Ingen albumomslag i cache, markera som klar ändå
+              console.log(`No album cover in cache for ${question.title}`);
+              setIsLoading(false);
+            }
+
+            return;
+          }
+
+          console.log(`Searching Deezer for: ${question.artist} - ${question.title}`);
+
           // Search for the track on Deezer
           const deezerTrack = await searchDeezerTrack(
             question.artist,
@@ -159,6 +413,8 @@ const QuizPage = () => {
           );
 
           if (deezerTrack) {
+            console.log(`Found Deezer track: ${deezerTrack.title} by ${deezerTrack.artist?.name}`);
+
             // Update the question with Deezer track info
             const updatedQuestion = { ...question, deezerTrack };
 
@@ -170,22 +426,79 @@ const QuizPage = () => {
               ...prev,
               [question.id]: deezerTrack
             }));
+
+            // Förladda bilden
+            if (deezerTrack.album && deezerTrack.album.cover_big) {
+              const img = new Image();
+              img.onload = () => {
+                console.log(`Album image loaded for ${deezerTrack.title}`);
+                setIsImageLoaded(true);
+                setIsLoading(false);
+                if (gameState === 'preparing') {
+                  console.log("Image loaded (new), moving from preparing to guessing state.");
+                  setGameState('guessing');
+                }
+
+                // Logik för att avgöra om musik ska spelas
+                const playNextSongFlag = sessionStorage.getItem('playNextSong') === 'true';
+                let playThisTime = false;
+
+                if (playNextSongFlag) {
+                  // Scenario B: User clicked "Next Song"
+                  console.log("img.onload (New): Play because 'Next Song' was clicked.");
+                  playThisTime = true;
+                  sessionStorage.removeItem('playNextSong');
+                  initialPlayDoneForIndex.current = currentQuestionIndex; // Mark as played for this index via "Next Song"
+                } else if (autoPlayMusic && initialPlayDoneForIndex.current !== currentQuestionIndex) {
+                  // Scenario A (First question) or C (Resuming quiz) with autoplay enabled,
+                  // AND initial play has not been done for THIS specific index yet.
+                  console.log(`img.onload (New): Autoplay is on. Current index: ${currentQuestionIndex}. Initial play for this index not done yet.`);
+                  playThisTime = true;
+                  initialPlayDoneForIndex.current = currentQuestionIndex; // Mark as played for this index
+                }
+
+                if (playThisTime && deezerTrack?.preview) {
+                  playMusic(deezerTrack?.preview);
+                } else if (playThisTime) {
+                  console.log("img.onload (New): Decided to play, but no preview URL.");
+                }
+              };
+              img.onerror = () => {
+                console.warn(`Failed to load album image for ${deezerTrack.title}`);
+                setIsImageLoaded(false);
+                setIsLoading(false);
+              };
+              img.src = deezerTrack.album.cover_big;
+            } else {
+              // Ingen albumomslag, markera som klar ändå
+              console.log(`No album cover for ${deezerTrack.title}`);
+              setIsImageLoaded(false);
+              setIsLoading(false);
+            }
+          } else {
+            console.warn(`No Deezer track found for ${question.artist} - ${question.title}`);
+            // Ingen Deezer-data, markera som klar ändå
+            setIsLoading(false);
           }
         } catch (error) {
           console.error("Error fetching Deezer track:", error);
+          // Vid fel, markera som klar ändå
+          setIsLoading(false);
         }
       };
 
+      // Kör Deezer-sökningen direkt
       fetchDeezerTrack();
     }
-  }, [currentQuestionIndex, allQuestions, gameState]);
+    prevQuestionIndexRef.current = currentQuestionIndex; // Update ref for next run
+  }, [currentQuestionIndex, allQuestions, gameState, activeAudio]); // Added activeAudio to dependencies
 
   const handleSliderChange = (newValue: number) => {
     if (!hasInteractedWithSlider) {
       setHasInteractedWithSlider(true);
     }
     setSelectedYear(newValue);
-  };
+};
   const handleDigitInputChange = (index: number, value: string) => {
     if (/^\d*$/.test(value) && value.length <= 1) {
       if (!hasInteractedWithSlider) {
@@ -289,16 +602,10 @@ const QuizPage = () => {
   };
 
   const handleNextSong = () => {
-    try {
-      // Safely stop the audio if it's playing
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    } catch (error) {
-      console.error("Error stopping audio:", error);
-      // Continue with the function even if there's an error with the player
-    }
+    // Ljudet stoppas nu av useEffect när currentQuestionIndex ändras.
+    // Spara en flagga för att indikera att vi ska spela upp musik för nästa fråga
+    // Detta används i useEffect för att spela upp musik när nästa fråga laddas
+    sessionStorage.setItem('playNextSong', 'true');
 
     const today = new Date().toISOString().split('T')[0];
     const playedKey = `maestroQuizPlayed_${today}`;
@@ -343,54 +650,7 @@ const QuizPage = () => {
   const handleViewLeaderboard = () => router.push('/leaderboard');
   const handleViewInstructions = () => router.push('/instructions');
 
-  const handleAudioReady = () => {
-    try {
-      setIsAudioReady(true);
 
-      // Vi försöker inte spela upp ljud automatiskt längre
-      // eftersom de flesta webbläsare blockerar autoplay utan användarinteraktion
-
-      // Istället låter vi användaren klicka på play-knappen
-      // och visar bara att ljudet är redo att spelas upp
-
-      // Om vi är i preparing-läge, väntar vi på användarinteraktion
-      // men sätter en timeout för att gå vidare om användaren inte interagerar
-      setTimeout(() => {
-        if (gameState === 'preparing') {
-          console.warn("Timeout waiting for user interaction, moving to guessing state");
-          setGameState('guessing');
-        }
-      }, 5000);
-    } catch (error) {
-      console.error("Error initializing audio player:", error);
-      // If there's an error, still move to guessing state after a delay
-      if (gameState === 'preparing') {
-        setTimeout(() => {
-          setGameState('guessing');
-        }, 1000);
-      }
-    }
-  };
-
-  const handleAudioPlay = () => {
-    setIsAudioPlaying(true);
-    if (gameState === 'preparing') {
-      setGameState('guessing');
-    }
-  };
-
-  const handleAudioPause = () => {
-    setIsAudioPlaying(false);
-  };
-
-  const handleAudioEnded = () => {
-    setIsAudioPlaying(false);
-    // Optionally loop the audio
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(e => console.error("Error replaying audio:", e));
-    }
-  };
 
   const pageStyle: React.CSSProperties = { position: 'relative', backgroundColor: 'rgb(20, 16, 44)', color: 'white', minHeight: '100vh', padding: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' };
   const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', width: '100%', maxWidth: '600px' };
@@ -437,7 +697,7 @@ const QuizPage = () => {
   const centeredMessageStyle : React.CSSProperties = { textAlign: 'center', marginTop: '50px', fontSize: '18px' };
 
   if (gameState === 'loading') return <div style={pageStyle}><p style={centeredMessageStyle}>Laddar quiz...</p></div>;
-  if (gameState === 'alreadyPlayed') { return ( <div style={pageStyle}> <header style={headerStyle}><div style={logoStyle}>Maestro</div><div style={scoreStyle}></div><div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div></header> <main style={mainContentStyle}> <div style={centeredMessageStyle}> <h2 style={{...songTitleStyle, fontSize: '28px', marginBottom: '15px'}}>Redan spelat idag!</h2> <p style={{fontSize: '18px', color: 'rgba(255,255,255,0.9)', marginBottom: '30px' }}>Du har redan spelat dagens quiz. Välkommen tillbaka imorgon för nya utmaningar!</p> <button style={buttonStyle} onClick={handleViewLeaderboard}>Visa Leaderboard</button> </div> </main> </div> ); }
+  if (gameState === 'alreadyPlayed') return ( <div style={pageStyle}> <header style={headerStyle}><div style={logoStyle}>Maestro</div><div style={scoreStyle}></div><div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div></header> <main style={mainContentStyle}> <div style={centeredMessageStyle}> <h2 style={{...songTitleStyle, fontSize: '28px', marginBottom: '15px'}}>Redan spelat idag!</h2> <p style={{fontSize: '18px', color: 'rgba(255,255,255,0.9)', marginBottom: '30px' }}>Du har redan spelat dagens quiz. Välkommen tillbaka imorgon för nya utmaningar!</p> <button style={buttonStyle} onClick={handleViewLeaderboard}>Visa Leaderboard</button> </div> </main> </div> );
   if (gameState === 'noQuestions') return <div style={pageStyle}><p style={centeredMessageStyle}>Inga frågor hittades för dagens quiz. Försök igen imorgon!</p></div>;
   if (gameState === 'errorFetching') return <div style={pageStyle}><p style={{...centeredMessageStyle, color: 'red'}}>Kunde inte ladda frågor. Kontrollera din anslutning och försök igen.</p></div>;
   if (!currentQuestion) return <div style={pageStyle}><p style={centeredMessageStyle}>Väntar på fråga...</p></div>;
@@ -445,18 +705,14 @@ const QuizPage = () => {
   return (
      <div style={pageStyle}>
        {showConfetti && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={200} />}
-       {(gameState === 'preparing' || gameState === 'guessing') && currentQuestion && currentQuestion.deezerTrack && (
-         <audio
-           ref={audioRef}
-           src={getDeezerPreviewUrl(currentQuestion.deezerTrack)}
-           preload="auto"
-           onCanPlayThrough={handleAudioReady}
-           onPlay={handleAudioPlay}
-           onPause={handleAudioPause}
-           onEnded={handleAudioEnded}
-           style={{ display: 'none' }}
-         />
-       )}
+       {/* Vi använder inte längre det inbäddade audio-elementet för uppspelning
+           eftersom det orsakar problem med omladdning.
+           Istället skapar vi ett nytt Audio-objekt när användaren klickar på play-knappen.
+           Vi behåller referensen för att kunna använda den i andra delar av koden. */}
+       <audio
+         ref={audioRef}
+         style={{ display: 'none' }}
+       />
        <header style={headerStyle}> <div style={logoStyle}>Maestro</div> <div style={scoreStyle}>Score: {score}</div> <div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div> </header>
        <main style={mainContentStyle}>
           {gameState === 'quizOver' ? ( /* Quiz Over View */
@@ -482,104 +738,43 @@ const QuizPage = () => {
                     backgroundColor: 'rgba(0, 0, 0, 0.3)',
                     borderRadius: '12px',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    minHeight: '200px'
                   }}>
-                    {/* Background thumbnail with blur */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundImage: `url(${currentQuestion.deezerTrack ?
-                        getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
-                        getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      filter: 'blur(10px)',
-                      opacity: 0.3,
-                      zIndex: 1
-                    }} />
+                    {/* Background thumbnail with blur - only show if image is loaded */}
+                    {!isLoading && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: `url(${currentQuestion.deezerTrack ?
+                          getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+                          getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'blur(10px)',
+                        opacity: 0.3,
+                        zIndex: 1
+                      }} />
+                    )}
 
-                    {/* Loading spinner */}
-                    <div style={{
-                      width: '50px',
-                      height: '50px',
-                      border: '5px solid rgba(255, 255, 255, 0.3)',
-                      borderTop: '5px solid #fff',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                      marginBottom: '20px',
-                      zIndex: 2
-                    }}></div>
-
-                    {/* Play button to help with autoplay restrictions */}
-                    <button
-                      onClick={() => {
-                        // Try to play the audio when user clicks
-                        if (audioRef.current) {
-                          // Mute audio first (to increase chances of successful autoplay)
-                          audioRef.current.muted = true;
-
-                          // Try to play muted first
-                          audioRef.current.play()
-                            .then(() => {
-                              // If successful, unmute and continue playing
-                              if (audioRef.current) {
-                                audioRef.current.muted = false;
-                              }
-                              setIsAudioPlaying(true);
-
-                              // Move to guessing state after a short delay
-                              setTimeout(() => {
-                                setGameState('guessing');
-                                if (inputRefs[0].current) inputRefs[0].current.focus();
-                              }, 500);
-                            })
-                            .catch(error => {
-                              console.error("Error playing audio (first attempt):", error);
-
-                              // Try again with user interaction
-                              if (audioRef.current) {
-                                audioRef.current.muted = false;
-                                audioRef.current.play()
-                                  .then(() => {
-                                    setIsAudioPlaying(true);
-                                    setTimeout(() => setGameState('guessing'), 500);
-                                  })
-                                  .catch(error => {
-                                    console.error("Error playing audio (second attempt):", error);
-                                    // Still move to guessing state even if audio fails
-                                    setGameState('guessing');
-                                  });
-                              } else {
-                                // No audio ref anymore, just move to guessing state
-                                setGameState('guessing');
-                              }
-                            });
-                        } else {
-                          // No audio ref, just move to guessing state
-                          setGameState('guessing');
-                        }
-                      }}
-                      style={{
-                        backgroundColor: 'rgb(100, 30, 150)',
-                        color: 'white',
-                        border: 'none',
-                        padding: '12px 30px',
-                        borderRadius: '30px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+                    {/* Loading spinner - only show while loading */}
+                    {isLoading && (
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        border: '5px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '5px solid #fff',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '20px',
                         zIndex: 2
-                      }}
-                    >
-                      <span style={{ marginRight: '8px' }}>▶</span> Klicka för att spela musik
-                    </button>
+                      }}></div>
+                    )}
+
+                    {/* Vi visar inte längre någon play/pause-knapp här */}
 
                     <style jsx>{`
                       @keyframes spin {
@@ -619,13 +814,40 @@ const QuizPage = () => {
                 </div>
               ) : (
                 <div style={artworkContainerStyle}>
-                  <img
-                    src={currentQuestion.deezerTrack ?
-                      getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
-                      getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
-                    alt={`Album cover for ${currentQuestion.title}`}
-                    style={artworkStyle}
-                  />
+                  {isLoading ? (
+                    <div style={{
+                      width: '100%',
+                      maxWidth: '300px',
+                      height: '300px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '15px'
+                    }}>
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        border: '5px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '5px solid #fff',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></div>
+                    </div>
+                  ) : (
+                    <img
+                      src={currentQuestion.deezerTrack ?
+                        getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+                        getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
+                      alt={`Album cover for ${currentQuestion.title}`}
+                      style={artworkStyle}
+                      onLoad={() => setIsImageLoaded(true)}
+                      onError={() => {
+                        console.warn(`Failed to load album image for ${currentQuestion.title}`);
+                        setIsImageLoaded(false);
+                      }}
+                    />
+                  )}
                 </div>
               )}
 
@@ -840,6 +1062,6 @@ const QuizPage = () => {
         </main>
       </div>
     );
- };
+};
 
  export default QuizPage;

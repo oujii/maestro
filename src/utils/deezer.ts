@@ -17,10 +17,13 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
   // Check cache first
   const cacheKey = `${artist}-${title}-${youtubeId}`;
   if (searchCache[cacheKey]) {
+    console.log(`Using cached Deezer search result for: ${cacheKey}`);
     return searchCache[cacheKey];
   }
 
   try {
+    console.log(`Searching Deezer for: "${artist} - ${title}"`);
+
     // Create search query - combine artist and title for better results
     const query = `${artist} ${title}`;
 
@@ -42,37 +45,55 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
     // Get the first track from results
     const track = data.data && data.data.length > 0 ? data.data[0] : null;
 
-    if (!track) {
-      // Om ingen träff, försök med bara artist eller bara titel
-      console.warn(`No results for "${query}", trying with just artist name`);
+    if (track) {
+      console.log(`Found Deezer track: "${track.title}" by ${track.artist.name}`);
 
-      // Försök med bara artistnamnet
-      const artistResponse = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(artist)}`, {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
-          'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
+      // Verify that the track has a preview URL
+      if (!track.preview) {
+        console.warn(`Track found but has no preview URL: ${track.title}`);
+      }
+
+      // Cache the result
+      searchCache[cacheKey] = track;
+      return track;
+    }
+
+    // No track found with combined search, try with just artist
+    console.warn(`No results for "${query}", trying with just artist name`);
+
+    // Try with just the artist name
+    const artistResponse = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(artist)}`, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
+        'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
+      }
+    });
+
+    if (artistResponse.ok) {
+      const artistData = await artistResponse.json();
+      if (artistData.data && artistData.data.length > 0) {
+        // Found a track by the artist, use it
+        const artistTrack = artistData.data[0];
+        console.log(`Found track by artist: "${artistTrack.title}" by ${artistTrack.artist.name}`);
+
+        // Verify that the track has a preview URL
+        if (!artistTrack.preview) {
+          console.warn(`Artist track found but has no preview URL: ${artistTrack.title}`);
         }
-      });
 
-      if (artistResponse.ok) {
-        const artistData = await artistResponse.json();
-        if (artistData.data && artistData.data.length > 0) {
-          // Hittade en låt av artisten, använd den
-          const artistTrack = artistData.data[0];
-          console.log(`Found track by artist: ${artistTrack.title}`);
-
-          // Cache the result
-          searchCache[cacheKey] = artistTrack;
-          return artistTrack;
-        }
+        // Cache the result
+        searchCache[cacheKey] = artistTrack;
+        return artistTrack;
       }
     }
 
-    // Cache the result
-    searchCache[cacheKey] = track;
+    // If we get here, we couldn't find any track
+    console.warn(`No Deezer tracks found for "${artist}" or "${title}"`);
 
-    return track;
+    // Cache null result to avoid repeated failed searches
+    searchCache[cacheKey] = null;
+    return null;
   } catch (error) {
     console.error('Error searching Deezer track:', error);
     return null;
@@ -145,7 +166,17 @@ export function getDeezerAlbumCover(track: any, size: 'small' | 'medium' | 'big'
  * @returns The preview URL or empty string if not available
  */
 export function getDeezerPreviewUrl(track: any): string {
-  return track && track.preview ? track.preview : '';
+  if (!track) {
+    console.warn('getDeezerPreviewUrl called with null track');
+    return '';
+  }
+
+  if (!track.preview) {
+    console.warn(`Track ${track.title} has no preview URL`);
+    return '';
+  }
+
+  return track.preview;
 }
 
 /**

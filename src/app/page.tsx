@@ -1,8 +1,34 @@
 // /Users/carl/Library/Application Support/Claude/maestro/maestro/src/app/page.tsx
-import React from 'react';
+'use client'
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const HomePage = () => {
+  const [autoPlayMusic, setAutoPlayMusic] = useState<boolean>(true);
+
+  // Läs inställningen från localStorage när komponenten laddas
+  useEffect(() => {
+    try {
+      const savedAutoPlay = localStorage.getItem('maestroAutoPlayMusic');
+      if (savedAutoPlay !== null) {
+        setAutoPlayMusic(savedAutoPlay === 'true');
+      }
+    } catch (error) {
+      console.error("Error reading autoplay setting from localStorage:", error);
+    }
+  }, []);
+
+  // Spara inställningen till localStorage när den ändras
+  const handleAutoPlayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setAutoPlayMusic(newValue);
+    try {
+      localStorage.setItem('maestroAutoPlayMusic', newValue.toString());
+      console.log("Saved autoplay setting:", newValue);
+    } catch (error) {
+      console.error("Error saving autoplay setting to localStorage:", error);
+    }
+  };
   // Styles
   const mainStyle: React.CSSProperties = {
     padding: '20px',
@@ -61,6 +87,25 @@ const HomePage = () => {
     boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)'
   };
 
+  const checkboxContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: '20px',
+    gap: '10px'
+  };
+
+  const checkboxLabelStyle: React.CSSProperties = {
+    fontSize: '16px',
+    color: 'rgba(255, 255, 255, 0.8)'
+  };
+
+  const checkboxStyle: React.CSSProperties = {
+    width: '18px',
+    height: '18px',
+    accentColor: 'rgb(100, 30, 150)'
+  };
+
   return (
     <main style={mainStyle}>
       <h1 style={titleStyle}>Välkommen till Maestro Quiz!</h1>
@@ -75,6 +120,19 @@ const HomePage = () => {
         <Link href="/quiz" style={secondaryButtonStyle}>
           Starta dagens quiz
         </Link>
+
+        <div style={checkboxContainerStyle}>
+          <input
+            type="checkbox"
+            id="autoPlayMusic"
+            checked={autoPlayMusic}
+            onChange={handleAutoPlayChange}
+            style={checkboxStyle}
+          />
+          <label htmlFor="autoPlayMusic" style={checkboxLabelStyle}>
+            Försök spela musik automatiskt (kräver användarinteraktion i vissa webbläsare)
+          </label>
+        </div>
       </div>
     </main>
   );

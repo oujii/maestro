@@ -4,7 +4,7 @@
 import React, { useEffect, useState, Suspense, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { submitScoreAction } from '../actions';
-import { getYouTubeFallbackThumbnail } from '../../utils/deezer';
+import { getYouTubeFallbackThumbnail, searchDeezerTrack, getDeezerAlbumCover } from '../../utils/deezer';
 
 interface RoundResult {
   questionId: string;
@@ -28,6 +28,7 @@ const ResultsContent = () => {
   const [playerName, setPlayerName] = useState<string>('');
   const [isPending, startTransition] = React.useTransition();
   const [submitMessage, setSubmitMessage] = useState<string>('');
+  const [deezerTracks, setDeezerTracks] = useState<Record<string, any>>({});
 
   useEffect(() => {
     setIsLoading(true); setErrorLoading(null);
@@ -46,6 +47,44 @@ const ResultsContent = () => {
     } catch (e: any) { console.error("Fel vid hämtning/tolkning av resultat:", e); setErrorLoading("Kunde inte ladda dina quizresultat."); setScore(null); setRoundRecaps([]); setAvgDeviation(null); }
     finally { setIsLoading(false); }
   }, []); // Kör bara på mount
+
+  // Hämta Deezer-data för varje låt
+  useEffect(() => {
+    const fetchDeezerData = async () => {
+      if (roundRecaps.length === 0) return;
+
+      // Skapa en kopia av deezerTracks för att uppdatera
+      const updatedDeezerTracks = { ...deezerTracks };
+      let hasNewData = false;
+
+      // Hämta data för varje låt som inte redan finns i cache
+      for (const round of roundRecaps) {
+        if (!updatedDeezerTracks[round.questionId]) {
+          try {
+            const deezerTrack = await searchDeezerTrack(
+              round.artist,
+              round.title,
+              round.youtubeVideoId
+            );
+
+            if (deezerTrack) {
+              updatedDeezerTracks[round.questionId] = deezerTrack;
+              hasNewData = true;
+            }
+          } catch (error) {
+            console.error(`Error fetching Deezer data for ${round.title}:`, error);
+          }
+        }
+      }
+
+      // Uppdatera state endast om vi har ny data
+      if (hasNewData) {
+        setDeezerTracks(updatedDeezerTracks);
+      }
+    };
+
+    fetchDeezerData();
+  }, [roundRecaps]);
 
   const handleShare = () => { if (navigator.share) { navigator.share({ title: 'Maestro Quiz Resultat', text: `Jag fick ${score} poäng i dagens Maestro Quiz! Kan du slå mig?`, url: window.location.origin, }).then(() => console.log('Resultat delat!')).catch((error) => console.error('Fel vid delning:', error)); } else { alert('Web Share API stöds inte i din webbläsare.'); } };
   const openSubmitModal = () => { setIsModalOpen(true); setSubmitMessage(''); };
@@ -128,7 +167,9 @@ const ResultsContent = () => {
                     {roundRecaps.map((round, index) => (
                         <li key={round.questionId || index} style={recapItemStyle}>
                             <img
-                              src={getYouTubeFallbackThumbnail(round.youtubeVideoId, 'high')}
+                              src={deezerTracks[round.questionId]
+                                ? getDeezerAlbumCover(deezerTracks[round.questionId], 'big')
+                                : getYouTubeFallbackThumbnail(round.youtubeVideoId, 'high')}
                               alt={`Album cover for ${round.title}`}
                               style={recapImageStyle}
                             />
