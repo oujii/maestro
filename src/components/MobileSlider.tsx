@@ -57,7 +57,7 @@ const MobileSlider: React.FC<MobileSliderProps> = ({
 
   const handleEnd = () => {
     setIsDragging(false);
-    setTimeout(() => setShowTooltip(false), 1000);
+    // Keep tooltip visible after interaction (don't hide it)
   };
 
   // Update value based on pointer position
@@ -159,14 +159,14 @@ const MobileSlider: React.FC<MobileSliderProps> = ({
 
   const sliderThumbStyle: React.CSSProperties = {
     position: 'absolute',
-    width: '32px',
-    height: '32px',
+    width: '40px', // Increased from 32px
+    height: '40px', // Increased from 32px
     backgroundColor: 'rgb(100, 30, 150)',
     border: '2px solid white',
     borderRadius: '50%',
     transform: 'translateX(-50%)',
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)', // Enhanced shadow
     transition: isDragging ? 'none' : 'left 0.1s ease-out',
   };
 
@@ -181,7 +181,7 @@ const MobileSlider: React.FC<MobileSliderProps> = ({
     borderRadius: '6px',
     fontSize: '16px',
     fontWeight: 'bold',
-    opacity: showTooltip && hasInteracted ? 1 : 0,
+    opacity: hasInteracted ? 1 : 0, // Always show after interaction
     transition: 'opacity 0.2s ease-out',
     pointerEvents: 'none',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',

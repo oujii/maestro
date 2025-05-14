@@ -673,7 +673,6 @@ const prevQuestionIndexRef = useRef<number | null>(null);
     marginBottom: '35px'
   };
   const yearInputStyle: React.CSSProperties = { width: '50px', height: '60px', textAlign: 'center', fontSize: '28px', fontWeight: 'bold', backgroundColor: 'rgba(100, 30, 150, 0.3)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', color: 'white' };
-  const sliderContainerStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', width: '100%', maxWidth: '400px', margin: '0 auto 30px auto', color: 'rgba(255, 255, 255, 0.7)' };
   const buttonStyle: React.CSSProperties = {
     backgroundColor: 'rgb(100, 30, 150)',
     color: 'white',
@@ -872,15 +871,84 @@ const prevQuestionIndexRef = useRef<number | null>(null);
                     ))}
                   </div>
 
-                  <div style={sliderContainerStyle}>
-                    <span>{MIN_YEAR}</span>
-                    <MobileSlider
-                      min={MIN_YEAR}
-                      max={MAX_YEAR}
-                      value={selectedYear}
-                      onChange={handleSliderChange}
-                    />
-                    <span>{MAX_YEAR}</span>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%',
+                    maxWidth: '400px',
+                    margin: '0 auto 30px auto',
+                  }}>
+                    {/* Slider without year labels */}
+                    <div style={{
+                      width: '100%',
+                      marginBottom: '15px'
+                    }}>
+                      <MobileSlider
+                        min={MIN_YEAR}
+                        max={MAX_YEAR}
+                        value={selectedYear}
+                        onChange={handleSliderChange}
+                      />
+                    </div>
+
+                    {/* Fine-tuning buttons */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '20px',
+                      marginTop: '5px'
+                    }}>
+                      <button
+                        onClick={() => {
+                          if (selectedYear && selectedYear > MIN_YEAR) {
+                            const newValue = selectedYear - 1;
+                            setSelectedYear(newValue);
+                            if (!hasInteractedWithSlider) {
+                              setHasInteractedWithSlider(true);
+                            }
+                          }
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(100, 30, 150, 0.8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '40px',
+                          height: '40px',
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                        }}
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (selectedYear && selectedYear < MAX_YEAR) {
+                            const newValue = selectedYear + 1;
+                            setSelectedYear(newValue);
+                            if (!hasInteractedWithSlider) {
+                              setHasInteractedWithSlider(true);
+                            }
+                          }
+                        }}
+                        style={{
+                          backgroundColor: 'rgba(100, 30, 150, 0.8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '40px',
+                          height: '40px',
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
                   <button
