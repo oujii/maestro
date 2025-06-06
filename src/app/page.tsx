@@ -114,25 +114,14 @@ const HomePage = () => {
         Utmana dig själv och se hur bra du känner till musikhistorien!
       </p>
       <div style={buttonContainerStyle}>
-        <Link href="/instructions" style={primaryButtonStyle}>
-          Hur man spelar
-        </Link>
-        <Link href="/quiz" style={secondaryButtonStyle}>
+        <Link href="/quiz" style={primaryButtonStyle}>
           Starta dagens quiz
         </Link>
-
-        <div style={checkboxContainerStyle}>
-          <input
-            type="checkbox"
-            id="autoPlayMusic"
-            checked={autoPlayMusic}
-            onChange={handleAutoPlayChange}
-            style={checkboxStyle}
-          />
-          <label htmlFor="autoPlayMusic" style={checkboxLabelStyle}>
-            Försök spela musik automatiskt (kräver användarinteraktion i vissa webbläsare)
-          </label>
-        </div>
+        <Link href="/instructions" style={secondaryButtonStyle}>
+          Hur man spelar
+        </Link>
+        
+       
       </div>
     </main>
   );

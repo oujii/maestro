@@ -652,25 +652,106 @@ const prevQuestionIndexRef = useRef<number | null>(null);
 
 
 
-  const pageStyle: React.CSSProperties = { position: 'relative', backgroundColor: 'rgb(20, 16, 44)', color: 'white', minHeight: '100vh', padding: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center' };
-  const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', width: '100%', maxWidth: '600px' };
+  const pageStyle: React.CSSProperties = { 
+    backgroundColor: 'rgb(20, 16, 44)', 
+    color: 'white', 
+    height: '100vh', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    overflow: 'hidden' 
+  };
+  const headerStyle: React.CSSProperties = { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: '20px 20px 0 20px', 
+    width: '100%', 
+    maxWidth: '600px', 
+    margin: '0 auto',
+    flexShrink: 0
+  };
   const logoStyle: React.CSSProperties = { fontSize: '24px', fontWeight: 'bold' };
   const scoreStyle: React.CSSProperties = { fontSize: '18px' };
   const iconsStyle: React.CSSProperties = { fontSize: '24px', display: 'flex', gap: '15px' };
-  const mainContentStyle: React.CSSProperties = { width: '100%', maxWidth: '450px', textAlign: 'center' };
+  const mainContentStyle: React.CSSProperties = { 
+    width: '100%', 
+    maxWidth: '450px', 
+    textAlign: 'center', 
+    margin: '0 auto',
+    flexGrow: 1, 
+    overflowY: 'auto',
+    padding: '0',
+    position: 'relative'
+  };
+  
+  const backgroundImageStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    zIndex: 1
+  };
+  
+  const textOverlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: '20px',
+    left: '20px',
+    right: '20px',
+    zIndex: 2,
+    textAlign: 'center',
+    background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%)',
+    padding: '40px 20px 20px 20px',
+    borderRadius: '0 0 15px 15px'
+  };
+  
+  const questionProgressOverlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+    zIndex: 2,
+    fontSize: '16px',
+    color: 'white',
+    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+    background: 'rgba(0, 0, 0, 0.5)',
+    padding: '8px 12px',
+    borderRadius: '8px'
+  };
+  const controlSectionStyle: React.CSSProperties = {
+    flexShrink: 0,
+    backgroundColor: 'rgb(20, 16, 44)',
+    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+    padding: '20px',
+    width: '100%',
+    maxWidth: '450px',
+    margin: '0 auto'
+  };
   const questionProgressStyle: React.CSSProperties = { textAlign: 'left', fontSize: '16px', marginBottom: '15px', color: 'rgba(255, 255, 255, 0.8)' };
   const artworkContainerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'center', marginBottom: '10px' };
   const artworkStyle: React.CSSProperties = { width: '80%', maxWidth: '300px', height: 'auto', borderRadius: '15px', objectFit: 'cover' };
   const songInfoStyle: React.CSSProperties = { textAlign: 'center', marginBottom: '20px' };
-  const songTitleStyle: React.CSSProperties = { fontSize: '22px', fontWeight: 'bold', marginBottom: '5px' };
-  const artistNameStyle: React.CSSProperties = { fontSize: '16px', color: 'rgba(255, 255, 255, 0.8)' };
+  const songTitleStyle: React.CSSProperties = { 
+    fontSize: '28px', 
+    fontWeight: 'bold', 
+    marginBottom: '8px',
+    color: 'white',
+    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+    lineHeight: '1.2'
+  };
+  const artistNameStyle: React.CSSProperties = { 
+    fontSize: '18px', 
+    color: 'rgba(255, 255, 255, 0.9)',
+    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)'
+  };
   const guessSectionStyle: React.CSSProperties = { textAlign: 'center' };
   const questionTextStyle: React.CSSProperties = { fontSize: '18px', marginBottom: '20px' };
   const yearInputsContainerStyle: React.CSSProperties = {
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: '10px',
-    marginBottom: '35px'
+    marginBottom: '20px'
   };
   const yearInputStyle: React.CSSProperties = { width: '50px', height: '60px', textAlign: 'center', fontSize: '28px', fontWeight: 'bold', backgroundColor: 'rgba(100, 30, 150, 0.3)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', color: 'white' };
   const buttonStyle: React.CSSProperties = {
@@ -722,280 +803,188 @@ const prevQuestionIndexRef = useRef<number | null>(null);
                 <button style={buttonStyle} onClick={handleViewLeaderboard}>Visa Topplista</button>
              </div>
           ) : ( /* Active Quiz View */
-            <>
-              <div style={questionProgressStyle}>Fråga {currentQuestionIndex + 1} av {allQuestions.length > 0 ? allQuestions.length : '...'}</div>
+          <>
+          {/* Guessing State Layout */}
+          {gameState === 'guessing' && (
+          <>
+            {/* Background Image */}
+            {!isLoading && currentQuestion && (
+                <img
+                  src={currentQuestion.deezerTrack ?
+                    getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+                    getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
+                  alt={`Album cover for ${currentQuestion.title}`}
+                  style={backgroundImageStyle}
+                  onLoad={() => setIsImageLoaded(true)}
+                  onError={() => {
+                    console.warn(`Failed to load album image for ${currentQuestion.title}`);
+                    setIsImageLoaded(false);
+                  }}
+                />
+              )}
 
-              {gameState === 'preparing' ? (
-                <div style={artworkContainerStyle}>
+              {/* Loading overlay */}
+              {isLoading && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(20, 16, 44, 0.9)',
+                  zIndex: 3
+                }}>
                   <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '12px',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minHeight: '200px'
-                  }}>
-                    {/* Background thumbnail with blur - only show if image is loaded */}
-                    {!isLoading && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundImage: `url(${currentQuestion.deezerTrack ?
-                          getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
-                          getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'blur(10px)',
-                        opacity: 0.3,
-                        zIndex: 1
-                      }} />
-                    )}
-
-                    {/* Loading spinner - only show while loading */}
-                    {isLoading && (
-                      <div style={{
-                        width: '50px',
-                        height: '50px',
-                        border: '5px solid rgba(255, 255, 255, 0.3)',
-                        borderTop: '5px solid #fff',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                        marginBottom: '20px',
-                        zIndex: 2
-                      }}></div>
-                    )}
-
-                    {/* Vi visar inte längre någon play/pause-knapp här */}
-
-                    <style jsx>{`
-                      @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                      }
-
-                      @keyframes gradientMove {
-                        0% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                        100% { background-position: 0% 50%; }
-                      }
-
-                      @keyframes glow {
-                        0% { box-shadow: 0 0 10px rgba(100, 30, 150, 0.5); }
-                        50% { box-shadow: 0 0 20px rgba(100, 30, 150, 0.8); }
-                        100% { box-shadow: 0 0 10px rgba(100, 30, 150, 0.5); }
-                      }
-
-                      .animated-button {
-                        background: linear-gradient(90deg, #6e30c9, #b48ee6, #6e30c9);
-                        background-size: 200% 200%;
-                        animation: gradientMove 3s ease infinite, glow 2s ease-in-out infinite;
-                      }
-
-                      .animated-button:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-                      }
-
-                      .animated-button:active {
-                        transform: translateY(1px);
-                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                      }
-                    `}</style>
-                  </div>
-                </div>
-              ) : (
-                <div style={artworkContainerStyle}>
-                  {isLoading ? (
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '300px',
-                      height: '300px',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                      borderRadius: '15px'
-                    }}>
-                      <div style={{
-                        width: '50px',
-                        height: '50px',
-                        border: '5px solid rgba(255, 255, 255, 0.3)',
-                        borderTop: '5px solid #fff',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></div>
-                    </div>
-                  ) : (
-                    <img
-                      src={currentQuestion.deezerTrack ?
-                        getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
-                        getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
-                      alt={`Album cover for ${currentQuestion.title}`}
-                      style={artworkStyle}
-                      onLoad={() => setIsImageLoaded(true)}
-                      onError={() => {
-                        console.warn(`Failed to load album image for ${currentQuestion.title}`);
-                        setIsImageLoaded(false);
-                      }}
-                    />
-                  )}
+                    width: '50px',
+          height: '50px',
+                    border: '5px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '5px solid #fff',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
                 </div>
               )}
 
-              <div style={songInfoStyle}><h2 style={songTitleStyle}>{currentQuestion.title}</h2><p style={artistNameStyle}>av {currentQuestion.artist}</p></div>
-              {gameState === 'guessing' && (
-                <div style={guessSectionStyle}>
-                  <p style={questionTextStyle}>Vilket år släpptes låten?</p>
+              {/* Question Progress Overlay */}
+              <div style={questionProgressOverlayStyle}>
+                Fråga {currentQuestionIndex + 1} av {allQuestions.length > 0 ? allQuestions.length : '...'}
+              </div>
 
-                  <div style={yearInputsContainerStyle}>
-                    {yearDigits.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={inputRefs[index]}
-                        type="text"
-                        maxLength={1}
-                        value={hasInteractedWithSlider ? digit : ''}
-                        onChange={(e) => handleDigitInputChange(index, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(index, e)}
-                        style={yearInputStyle}
-                        placeholder="" // Ändra från placeholder={hasInteractedWithSlider ? '' : '_'} till bara tom sträng
-                      />
-                    ))}
-                  </div>
+          {/* Song Info Overlay */}
+              <div style={textOverlayStyle}>
+                <h2 style={songTitleStyle}>{currentQuestion.title}</h2>
+                <p style={artistNameStyle}>av {currentQuestion.artist}</p>
+              </div>
+            </>
+          )}
 
+          {/* Feedback State Layout */}
+          {gameState === 'feedback' && userGuessFeedback && (
+            <div style={{
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              height: '100%',
+              overflowY: 'auto',
+              paddingBottom: '120px' // Make room for fixed button
+            }}>
+              {/* Question Progress */}
+              <div style={{
+                textAlign: 'left',
+                fontSize: '16px',
+                marginBottom: '20px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                alignSelf: 'flex-start'
+              }}>
+                Fråga {currentQuestionIndex + 1} av {allQuestions.length > 0 ? allQuestions.length : '...'}
+              </div>
+
+              {/* Album Cover in Box */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                marginBottom: '20px'
+              }}>
+                <img
+                  src={currentQuestion.deezerTrack ?
+                getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
+              getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
+                  alt={`Album cover for ${currentQuestion.title}`}
+                  style={{
+                    width: '250px',
+                    height: '250px',
+                    borderRadius: '15px',
+                    objectFit: 'cover'
+                  }}
+                />
+              </div>
+
+              {/* Song Info */}
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  marginBottom: '8px',
+                  color: 'white'
+                }}>{currentQuestion.title}</h2>
+                <p style={{
+                  fontSize: '16px',
+                  color: 'rgba(255, 255, 255, 0.8)'
+                }}>av {currentQuestion.artist}</p>
+              </div>
+
+              {/* Trivia */}
+              <div style={triviaBubbleStyle}>
+                💡 {currentQuestion.trivia}
+              </div>
+
+              {/* Timeline */}
+              <div style={timelineWrapperStyle}>
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: '20px',
+                  marginBottom: '20px'
+                }}>
+                  {/* Timeline bar */}
                   <div style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '4px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                    borderRadius: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)'
+                  }}></div>
+
+                  {/* Correct year marker - on top */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '0',
+                    left: calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR),
+                    transform: 'translateX(-50%)',
                     display: 'flex',
                     flexDirection: 'column',
-                    width: '100%',
-                    maxWidth: '400px',
-                    margin: '0 auto 30px auto',
+                    alignItems: 'center'
                   }}>
-                    {/* Slider without year labels */}
                     <div style={{
-                      width: '100%',
-                      marginBottom: '15px'
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      marginBottom: '8px'
                     }}>
-                      <MobileSlider
-                        min={MIN_YEAR}
-                        max={MAX_YEAR}
-                        value={selectedYear}
-                        onChange={handleSliderChange}
-                      />
-                    </div>
-
-                    {/* Fine-tuning buttons */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      gap: '20px',
-                      marginTop: '5px'
-                    }}>
-                      <button
-                        onClick={() => {
-                          if (selectedYear && selectedYear > MIN_YEAR) {
-                            const newValue = selectedYear - 1;
-                            setSelectedYear(newValue);
-                            if (!hasInteractedWithSlider) {
-                              setHasInteractedWithSlider(true);
-                            }
-                          }
-                        }}
-                        style={{
-                          backgroundColor: 'rgba(100, 30, 150, 0.8)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '40px',
-                          height: '40px',
-                          fontSize: '20px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                        }}
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (selectedYear && selectedYear < MAX_YEAR) {
-                            const newValue = selectedYear + 1;
-                            setSelectedYear(newValue);
-                            if (!hasInteractedWithSlider) {
-                              setHasInteractedWithSlider(true);
-                            }
-                          }
-                        }}
-                        style={{
-                          backgroundColor: 'rgba(100, 30, 150, 0.8)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '40px',
-                          height: '40px',
-                          fontSize: '20px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                        }}
-                      >
-                        +
-                      </button>
+                      {currentQuestion.correct_year}
                     </div>
                   </div>
 
-                  <button
-                    className="animated-button"
-                    style={{
-                      ...buttonStyle,
-                      zIndex: 10
-                    }}
-                    onClick={handleGuess}
-                  >
-                    GISSA
-                  </button>
-                </div>
-              )}
-              {gameState === 'feedback' && userGuessFeedback && (
-                <div style={guessSectionStyle}>
-                  <div style={triviaBubbleStyle}>
-                    💡 {currentQuestion.trivia}
-                  </div>
+                  {/* Correct year circle - on the line */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR),
+                    transform: 'translate(-50%, -50%)',
+                    width: '16px',
+                    height: '16px',
+                    backgroundColor: '#fff',
+                    borderRadius: '50%',
+                    zIndex: 2
+                  }}></div>
 
-                  <div style={timelineWrapperStyle}>
-                    <div style={{
-                      position: 'relative',
-                      width: '100%',
-                      height: '100px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: '20px',
-                      marginBottom: '20px'
-                    }}>
-                      {/* Timeline bar */}
+                  {/* Guessed year marker - on bottom */}
+                  {userGuessFeedback.guessedYear !== currentQuestion.correct_year && (
+                    <>
                       <div style={{
                         position: 'absolute',
-                        width: '100%',
-                        height: '4px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                        borderRadius: '2px',
-                        top: '50%',
-                        transform: 'translateY(-50%)'
-                      }}></div>
-
-                      {/* Correct year marker - on top */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '0',
-                        left: calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR),
+                        bottom: '0',
+                        left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
                         transform: 'translateX(-50%)',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1004,132 +993,207 @@ const prevQuestionIndexRef = useRef<number | null>(null);
                         <div style={{
                           fontSize: '18px',
                           fontWeight: 'bold',
-                          color: '#fff',
-                          marginBottom: '8px'
+                          color: '#b48ee6',
+                          marginTop: '8px'
                         }}>
-                          {currentQuestion.correct_year}
+                          {userGuessFeedback.guessedYear}
                         </div>
                       </div>
 
-                      {/* Correct year circle - on the line */}
+                      {/* Guessed year circle - on the line */}
                       <div style={{
                         position: 'absolute',
                         top: '50%',
-                        left: calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR),
+                        left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
                         transform: 'translate(-50%, -50%)',
                         width: '16px',
                         height: '16px',
-                        backgroundColor: '#fff',
+                        backgroundColor: '#b48ee6',
                         borderRadius: '50%',
                         zIndex: 2
                       }}></div>
 
-                      {/* Guessed year marker - on bottom */}
-                      {userGuessFeedback.guessedYear !== currentQuestion.correct_year && (
-                        <>
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '0',
-                            left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
-                            transform: 'translateX(-50%)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center'
-                          }}>
-                            <div style={{
-                              fontSize: '18px',
-                              fontWeight: 'bold',
-                              color: '#b48ee6',
-                              marginTop: '8px'
-                            }}>
-                              {userGuessFeedback.guessedYear}
-                            </div>
-                          </div>
-
-                          {/* Guessed year circle - on the line */}
-                          <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR),
-                            transform: 'translate(-50%, -50%)',
-                            width: '16px',
-                            height: '16px',
-                            backgroundColor: '#b48ee6',
-                            borderRadius: '50%',
-                            zIndex: 2
-                          }}></div>
-
-                          {/* Line showing the difference between years */}
-                          <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: calculateTimelinePosition(Math.min(userGuessFeedback.guessedYear, currentQuestion.correct_year), MIN_YEAR, MAX_YEAR),
-                            width: `${Math.abs(
-                              parseFloat(calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR)) -
-                              parseFloat(calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR))
-                            )}%`,
-                            height: '4px',
-                            backgroundColor: 'rgba(180, 142, 230, 0.7)',
-                            transform: 'translateY(-50%)',
-                            zIndex: 1
-                          }}></div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Answer text */}
-                    <div style={{
-                      textAlign: 'center',
-                      marginTop: '10px',
-                      marginBottom: '10px'
-                    }}>
+                      {/* Line showing the difference between years */}
                       <div style={{
-                        fontSize: '28px',
-                        fontWeight: 'bold',
-                        marginBottom: '5px'
-                      }}>
-                        Svar: <span style={{ color: '#b48ee6' }}>{currentQuestion.correct_year}</span>
-                      </div>
-
-                      <div style={{
-                        fontSize: '20px',
-                        fontWeight: 'bold',
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        marginBottom: '15px'
-                      }}>
-
-
-    {userGuessFeedback.isCorrect ? 'RÄTT! 🎯' : `${Math.abs(userGuessFeedback.yearDifference)} ÅRS SKILLNAD 😮`}
-                  </div>
-
-                      <div style={{
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        color: '#ffcc00'
-                      }}>
-                        +{userGuessFeedback.points} POÄNG
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    className="animated-button"
-                    style={{
-                      ...buttonStyle,
-                      zIndex: 10,
-                      marginTop: '30px'
-                    }}
-                    onClick={handleNextSong}
-                  >
-                    NÄSTA LÅT →
-                  </button>
+                        position: 'absolute',
+                        top: '50%',
+                        left: calculateTimelinePosition(Math.min(userGuessFeedback.guessedYear, currentQuestion.correct_year), MIN_YEAR, MAX_YEAR),
+                        width: `${Math.abs(
+                          parseFloat(calculateTimelinePosition(userGuessFeedback.guessedYear, MIN_YEAR, MAX_YEAR)) -
+                          parseFloat(calculateTimelinePosition(currentQuestion.correct_year, MIN_YEAR, MAX_YEAR))
+                        )}%`,
+                        height: '4px',
+                        backgroundColor: 'rgba(180, 142, 230, 0.7)',
+                        transform: 'translateY(-50%)',
+                        zIndex: 1
+                      }}></div>
+                    </>
+                  )}
                 </div>
-              )}
-            </>
+
+                {/* Answer text */}
+                <div style={{
+                  textAlign: 'center',
+                  marginTop: '10px',
+                  marginBottom: '10px'
+                }}>
+                  <div style={{
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    marginBottom: '5px'
+                  }}>
+                    Svar: <span style={{ color: '#b48ee6' }}>{currentQuestion.correct_year}</span>
+                  </div>
+
+                  <div style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    marginBottom: '15px'
+                  }}>
+                    {userGuessFeedback.isCorrect ? 'RÄTT! 🎯' : `${Math.abs(userGuessFeedback.yearDifference)} ÅRS SKILLNAD 😮`}
+                  </div>
+
+                  <div style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: '#ffcc00'
+                  }}>
+                    +{userGuessFeedback.points} POÄNG
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
+          </>
+        )}
         </main>
-      </div>
-    );
+          
+         {/* Fixed Control Section for Guessing */}
+         {gameState === 'guessing' && (
+           <div style={controlSectionStyle}>
+             <div style={yearInputsContainerStyle}>
+               <button
+                 onClick={() => {
+                   if (selectedYear && selectedYear > MIN_YEAR) {
+                     const newValue = selectedYear - 1;
+                     setSelectedYear(newValue);
+                     if (!hasInteractedWithSlider) {
+                       setHasInteractedWithSlider(true);
+                     }
+                   }
+                 }}
+                 style={{
+                   backgroundColor: 'rgba(100, 30, 150, 0.8)',
+                   color: 'white',
+                   border: 'none',
+                   borderRadius: '50%',
+                   width: '40px',
+                   height: '40px',
+                   fontSize: '20px',
+                   fontWeight: 'bold',
+                   cursor: 'pointer',
+                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                 }}
+               >
+                 -
+               </button>
+               {yearDigits.map((digit, index) => (
+                 <input
+                   key={index}
+                   ref={inputRefs[index]}
+                   type="text"
+                   maxLength={1}
+                   value={hasInteractedWithSlider ? digit : ''}
+                   onChange={(e) => handleDigitInputChange(index, e.target.value)}
+                   onKeyDown={(e) => handleKeyDown(index, e)}
+                   style={yearInputStyle}
+                   placeholder=""
+                 />
+               ))}
+               <button
+                 onClick={() => {
+                   if (selectedYear && selectedYear < MAX_YEAR) {
+                     const newValue = selectedYear + 1;
+                     setSelectedYear(newValue);
+                     if (!hasInteractedWithSlider) {
+                       setHasInteractedWithSlider(true);
+                     }
+                   }
+                 }}
+                 style={{
+                   backgroundColor: 'rgba(100, 30, 150, 0.8)',
+                   color: 'white',
+                   border: 'none',
+                   borderRadius: '50%',
+                   width: '40px',
+                   height: '40px',
+                   fontSize: '20px',
+                   fontWeight: 'bold',
+                   cursor: 'pointer',
+                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                 }}
+               >
+                 +
+               </button>
+             </div>
+
+             <div style={{
+               display: 'flex',
+               flexDirection: 'column',
+               width: '100%',
+               maxWidth: '400px',
+               margin: '0 auto 20px auto',
+             }}>
+               <div style={{
+                 width: '100%',
+                 marginBottom: '15px'
+               }}>
+                 <MobileSlider
+                   min={MIN_YEAR}
+                   max={MAX_YEAR}
+                   value={selectedYear}
+                   onChange={handleSliderChange}
+                 />
+               </div>
+             </div>
+
+             <button
+               className="animated-button"
+               style={{
+                 ...buttonStyle,
+                 zIndex: 10,
+                 width: '100%',
+                 maxWidth: '400px',
+                 margin: '0 auto'
+               }}
+               onClick={handleGuess}
+             >
+               GISSA
+             </button>
+           </div>
+           )}
+
+               {/* Fixed Control Section for Feedback */}
+         {gameState === 'feedback' && (
+           <div style={controlSectionStyle}>
+             <button
+               className="animated-button"
+               style={{
+                 ...buttonStyle,
+                 zIndex: 10,
+                 width: '100%',
+                 maxWidth: '400px',
+                 margin: '0 auto'
+               }}
+               onClick={handleNextSong}
+             >
+               NÄSTA LÅT →
+             </button>
+           </div>
+         )}
+        </div>
+     );
 };
 
  export default QuizPage;
