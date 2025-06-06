@@ -10,7 +10,11 @@ export async function submitScoreAction(name: string, score: number): Promise<{ 
   try {
     const { error } = await supabase
       .from('leaderboard')
-      .insert([{ name: name, score: score }]);
+      .insert([{ 
+        name: name, 
+        score: score,
+        quiz_date: new Date().toISOString().slice(0, 10)
+      }]);
 
     if (error) {
       throw new Error(error.message || 'Databasfel vid insättning.');

@@ -1,34 +1,33 @@
 // /Users/carl/Library/Application Support/Claude/maestro/maestro/src/app/page.tsx
-'use client'
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
-const HomePage = () => {
-  const [autoPlayMusic, setAutoPlayMusic] = useState<boolean>(true);
+interface YesterdayWinner {
+  name: string;
+  score: number;
+}
 
-  // Läs inställningen från localStorage när komponenten laddas
-  useEffect(() => {
-    try {
-      const savedAutoPlay = localStorage.getItem('maestroAutoPlayMusic');
-      if (savedAutoPlay !== null) {
-        setAutoPlayMusic(savedAutoPlay === 'true');
-      }
-    } catch (error) {
-      console.error("Error reading autoplay setting from localStorage:", error);
-    }
-  }, []);
+async function getYesterdayWinner(): Promise<YesterdayWinner | null> {
+  try {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .select('name, score')
+      .eq('quiz_date', yesterday)
+      .order('score', { ascending: false })
+      .limit(1);
+    
+    if (error) throw error;
+    return data && data.length > 0 ? data[0] : null;
+  } catch (error) {
+    console.error('Error fetching yesterday winner:', error);
+    return null;
+  }
+}
 
-  // Spara inställningen till localStorage när den ändras
-  const handleAutoPlayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.checked;
-    setAutoPlayMusic(newValue);
-    try {
-      localStorage.setItem('maestroAutoPlayMusic', newValue.toString());
-      console.log("Saved autoplay setting:", newValue);
-    } catch (error) {
-      console.error("Error saving autoplay setting to localStorage:", error);
-    }
-  };
+const HomePage = async () => {
+  const yesterdayWinner = await getYesterdayWinner();
   // Styles
   const mainStyle: React.CSSProperties = {
     padding: '20px',
@@ -106,6 +105,17 @@ const HomePage = () => {
     accentColor: 'rgb(100, 30, 150)'
   };
 
+  const yesterdayWinnerStyle: React.CSSProperties = {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    border: '1px solid #FFD700',
+    borderRadius: '8px',
+    padding: '15px',
+    margin: '20px 0',
+    fontSize: '16px',
+    color: '#FFD700',
+    fontWeight: 'bold'
+  };
+
   return (
     <main style={mainStyle}>
       <h1 style={titleStyle}>Välkommen till Maestro Quiz!</h1>
@@ -120,9 +130,13 @@ const HomePage = () => {
         <Link href="/instructions" style={secondaryButtonStyle}>
           Hur spelar man?
         </Link>
-        
-       
       </div>
+      
+      {yesterdayWinner && (
+        <div style={yesterdayWinnerStyle}>
+          🏆 Gårdagens vinnare: {yesterdayWinner.name} med {yesterdayWinner.score} poäng!
+        </div>
+      )}
     </main>
   );
 };
