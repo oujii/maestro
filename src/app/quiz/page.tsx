@@ -759,7 +759,7 @@ const prevQuestionIndexRef = useRef<number | null>(null);
     color: 'white',
     border: 'none',
     padding: '15px 0',
-    width: '100%',
+    width: '80%',
     maxWidth: '400px',
     fontSize: '20px',
     fontWeight: 'bold',
@@ -876,63 +876,67 @@ const prevQuestionIndexRef = useRef<number | null>(null);
               <div style={{
                 textAlign: 'left',
                 fontSize: '16px',
-                marginBottom: '20px',
+                marginBottom: '15px',
                 color: 'rgba(255, 255, 255, 0.8)',
                 alignSelf: 'flex-start'
               }}>
                 Fråga {currentQuestionIndex + 1} av {allQuestions.length > 0 ? allQuestions.length : '...'}
               </div>
 
-              {/* Album Cover in Box */}
+              {/* Two-column layout: Album Cover and Song Info */}
               <div style={{
                 display: 'flex',
-                justifyContent: 'center',
-                marginBottom: '20px'
+                alignItems: 'center',
+                gap: '16px',
+                marginBottom: '15px',
+                width: '100%'
               }}>
+                {/* Album Cover */}
                 <img
                   src={currentQuestion.deezerTrack ?
                 getDeezerAlbumCover(currentQuestion.deezerTrack, 'big') :
               getYouTubeFallbackThumbnail(currentQuestion.youtube_video_id, 'high')}
                   alt={`Album cover for ${currentQuestion.title}`}
                   style={{
-                    width: '250px',
-                    height: '250px',
-                    borderRadius: '15px',
-                    objectFit: 'cover'
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '12px',
+                    objectFit: 'cover',
+                    flexShrink: 0
                   }}
                 />
-              </div>
 
-              {/* Song Info */}
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h2 style={{
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                  marginBottom: '8px',
-                  color: 'white'
-                }}>{currentQuestion.title}</h2>
-                <p style={{
-                  fontSize: '16px',
-                  color: 'rgba(255, 255, 255, 0.8)'
-                }}>av {currentQuestion.artist}</p>
-              </div>
-
-              {/* Trivia */}
-              <div style={triviaBubbleStyle}>
-                💡 {currentQuestion.trivia}
+                {/* Song Info */}
+                <div style={{ 
+                  textAlign: 'left',
+                  flex: 1
+                }}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    marginBottom: '4px',
+                    color: 'white',
+                    lineHeight: '1.2'
+                  }}>{currentQuestion.title}</h2>
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    margin: 0
+                  }}>av {currentQuestion.artist}</p>
+                </div>
               </div>
 
               {/* Timeline */}
-              <div style={timelineWrapperStyle}>
+              <div style={{...timelineWrapperStyle, margin: '10px auto', padding: '10px 0'}}>
                 <div style={{
                   position: 'relative',
                   width: '100%',
-                  height: '100px',
+                  height: '80px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: '20px',
-                  marginBottom: '20px'
+                  marginTop: '10px',
+                  marginBottom: '10px'
                 }}>
                   {/* Timeline bar */}
                   <div style={{
@@ -1034,34 +1038,45 @@ const prevQuestionIndexRef = useRef<number | null>(null);
                 {/* Answer text */}
                 <div style={{
                   textAlign: 'center',
-                  marginTop: '10px',
-                  marginBottom: '10px'
+                  marginTop: '5px',
+                  marginBottom: '5px'
                 }}>
                   <div style={{
-                    fontSize: '28px',
+                    fontSize: '24px',
                     fontWeight: 'bold',
-                    marginBottom: '5px'
+                    marginBottom: '3px'
                   }}>
                     Svar: <span style={{ color: '#b48ee6' }}>{currentQuestion.correct_year}</span>
                   </div>
 
                   <div style={{
-                    fontSize: '20px',
+                    fontSize: '18px',
                     fontWeight: 'bold',
                     color: 'rgba(255, 255, 255, 0.8)',
-                    marginBottom: '15px'
+                    marginBottom: '8px'
                   }}>
                     {userGuessFeedback.isCorrect ? 'RÄTT! 🎯' : `${Math.abs(userGuessFeedback.yearDifference)} ÅRS SKILLNAD 😮`}
                   </div>
 
                   <div style={{
-                    fontSize: '24px',
+                    fontSize: '20px',
                     fontWeight: 'bold',
                     color: '#ffcc00'
                   }}>
                     +{userGuessFeedback.points} POÄNG
                   </div>
                 </div>
+              </div>
+
+              {/* Trivia - moved after result block */}
+              <div style={{
+                ...triviaBubbleStyle,
+                margin: '15px auto',
+                maxWidth: '400px',
+                fontSize: '13px',
+                padding: '12px'
+              }}>
+                💡 {currentQuestion.trivia}
               </div>
             </div>
           )}

@@ -86,7 +86,39 @@ const ResultsContent = () => {
     fetchDeezerData();
   }, [roundRecaps]);
 
-  const handleShare = () => { if (navigator.share) { navigator.share({ title: 'Maestro Quiz Resultat', text: `Jag fick ${score} poäng i dagens Maestro Quiz! Kan du slå mig?`, url: window.location.origin, }).then(() => console.log('Resultat delat!')).catch((error) => console.error('Fel vid delning:', error)); } else { alert('Web Share API stöds inte i din webbläsare.'); } };
+  const handleShare = () => {
+    const shareText = `Jag fick ${score} poäng i dagens Maestro Quiz! Kan du slå mig? ${window.location.origin}`;
+    
+    if (navigator.share) {
+      // För iOS: inkludera URL i texten för att säkerställa att meddelandet inkluderas
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      if (isIOS) {
+        // På iOS, använd bara text med URL inkluderad för att få med meddelandet
+        navigator.share({
+          text: shareText
+        }).then(() => console.log('Resultat delat!')).catch((error) => console.error('Fel vid delning:', error));
+      } else {
+        // På Android och andra enheter, använd separata text och url fält
+        navigator.share({
+          title: 'Maestro Quiz Resultat',
+          text: `Jag fick ${score} poäng i dagens Maestro Quiz! Kan du slå mig?`,
+          url: window.location.origin,
+        }).then(() => console.log('Resultat delat!')).catch((error) => console.error('Fel vid delning:', error));
+      }
+    } else {
+      // Fallback för webbläsare som inte stöder Web Share API
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert('Resultatet har kopierats till urklipp!');
+        }).catch(() => {
+          alert(`Kopiera detta meddelande:\n\n${shareText}`);
+        });
+      } else {
+        alert(`Kopiera detta meddelande:\n\n${shareText}`);
+      }
+    }
+  };
   const openSubmitModal = () => { setIsModalOpen(true); setSubmitMessage(''); };
   const closeSubmitModal = () => { setIsModalOpen(false); setPlayerName(''); };
   const handleViewInstructions = () => router.push('/instructions');

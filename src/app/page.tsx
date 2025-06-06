@@ -118,7 +118,7 @@ const HomePage = () => {
           Starta dagens quiz
         </Link>
         <Link href="/instructions" style={secondaryButtonStyle}>
-          Hur man spelar
+          Hur spelar man?
         </Link>
         
        
