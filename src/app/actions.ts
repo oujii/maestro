@@ -8,12 +8,20 @@ export async function submitScoreAction(name: string, score: number): Promise<{ 
   }
 
   try {
+    // Använd svensk tidszon för att spara rätt datum
+    const stockholmDate = new Date().toLocaleString("en-CA", {
+      timeZone: "Europe/Stockholm",
+      year: "numeric",
+      month: "2-digit", 
+      day: "2-digit"
+    }); // Format: YYYY-MM-DD
+    
     const { error } = await supabase
       .from('leaderboard')
       .insert([{ 
         name: name, 
         score: score,
-        quiz_date: new Date().toISOString().slice(0, 10)
+        quiz_date: stockholmDate
       }]);
 
     if (error) {

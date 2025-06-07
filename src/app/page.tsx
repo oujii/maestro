@@ -10,16 +10,47 @@ interface YesterdayWinner {
 
 async function getYesterdayWinner(): Promise<YesterdayWinner | null> {
   try {
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // Använd svensk tidszon (Stockholm) för att få rätt datum
+    const stockholmTime = new Date().toLocaleString("en-CA", {
+      timeZone: "Europe/Stockholm",
+      year: "numeric",
+      month: "2-digit", 
+      day: "2-digit"
+    }); // Format: YYYY-MM-DD
+    
+    const todayInStockholm = new Date(stockholmTime + 'T00:00:00');
+    const yesterdayInStockholm = new Date(todayInStockholm);
+    yesterdayInStockholm.setDate(todayInStockholm.getDate() - 1);
+    
+    const yesterdayStr = yesterdayInStockholm.toISOString().slice(0, 10);
+    const todayStr = todayInStockholm.toISOString().slice(0, 10);
+    
+    console.log('=== Yesterday Winner Debug (Stockholm Time) ===');
+    console.log('Server time (UTC):', new Date().toISOString());
+    console.log('Stockholm time now:', stockholmTime);
+    console.log('Today in Stockholm:', todayStr);
+    console.log('Yesterday in Stockholm:', yesterdayStr);
+    console.log('Searching for winners on:', yesterdayStr);
+    
     const { data, error } = await supabase
       .from('leaderboard')
-      .select('name, score')
-      .eq('quiz_date', yesterday)
+      .select('name, score, quiz_date')
+      .eq('quiz_date', yesterdayStr)
       .order('score', { ascending: false })
-      .limit(1);
+      .limit(5); // Hämta fler för debugging
     
-    if (error) throw error;
-    return data && data.length > 0 ? data[0] : null;
+    console.log('All results for yesterday:', data);
+    
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+    
+    const winner = data && data.length > 0 ? data[0] : null;
+    console.log('Selected winner:', winner);
+    console.log('==============================');
+    
+    return winner;
   } catch (error) {
     console.error('Error fetching yesterday winner:', error);
     return null;
@@ -28,6 +59,22 @@ async function getYesterdayWinner(): Promise<YesterdayWinner | null> {
 
 const HomePage = async () => {
   const yesterdayWinner = await getYesterdayWinner();
+  
+  // Debug: Hämta alla unika datum från databasen
+  let allDates: string[] = [];
+  try {
+    const { data } = await supabase
+      .from('leaderboard')
+      .select('quiz_date')
+      .order('quiz_date', { ascending: false });
+    
+    if (data) {
+      allDates = [...new Set(data.map(item => item.quiz_date))].filter(Boolean);
+      console.log('All quiz dates in database:', allDates);
+    }
+  } catch (error) {
+    console.error('Error fetching all dates:', error);
+  }
   // Styles
   const mainStyle: React.CSSProperties = {
     padding: '20px',

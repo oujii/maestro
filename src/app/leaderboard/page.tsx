@@ -26,7 +26,14 @@ const LeaderboardPage = () => {
     const fetchLeaderboard = async () => {
       setLoading(true); setError(null);
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        // Använd svensk tidszon för att få rätt datum
+        const today = new Date().toLocaleString("en-CA", {
+          timeZone: "Europe/Stockholm",
+          year: "numeric",
+          month: "2-digit", 
+          day: "2-digit"
+        }); // Format: YYYY-MM-DD
+        
         const { data, error: fetchError } = await supabase
           .from('leaderboard')
           .select('id, name, score, created_at, quiz_date')
