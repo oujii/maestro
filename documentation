@@ -13,7 +13,7 @@ xhr.addEventListener('readystatechange', function () {
 });
 
 xhr.open('GET', 'https://deezerdevs-deezer.p.rapidapi.com/track/%7Bid%7D');
-xhr.setRequestHeader('x-rapidapi-key', 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679');
+xhr.setRequestHeader('x-rapidapi-key', 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679'); // rotated api key
 xhr.setRequestHeader('x-rapidapi-host', 'deezerdevs-deezer.p.rapidapi.com');
 
 xhr.send(data);
