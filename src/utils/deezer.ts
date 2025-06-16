@@ -31,7 +31,7 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
     const response = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(query)}`, {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
+        'x-rapidapi-key': process.env.NEXT_PUBLIC_DEEZER_API_KEY || '',
         'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
       }
     });
@@ -65,7 +65,7 @@ export async function searchDeezerTrack(artist: string, title: string, youtubeId
     const artistResponse = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/search?q=${encodeURIComponent(artist)}`, {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
+        'x-rapidapi-key': process.env.NEXT_PUBLIC_DEEZER_API_KEY || '',
         'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
       }
     });
@@ -116,7 +116,7 @@ export async function getDeezerTrack(trackId: string): Promise<any> {
     const response = await fetch(`https://deezerdevs-deezer.p.rapidapi.com/track/${trackId}`, {
       method: 'GET',
       headers: {
-        'x-rapidapi-key': 'e91bc1509cmsh7643f0470bb4185p1bc0ffjsnef20886dc679',
+        'x-rapidapi-key': process.env.NEXT_PUBLIC_DEEZER_API_KEY || '',
         'x-rapidapi-host': 'deezerdevs-deezer.p.rapidapi.com'
       }
     });
