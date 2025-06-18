@@ -5,6 +5,9 @@ import React, { useEffect, useState, Suspense, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { submitScoreAction } from '../actions';
 import { getYouTubeFallbackThumbnail, searchDeezerTrack, getDeezerAlbumCover } from '../../utils/deezer';
+import NavigationHeader from '@/components/NavigationHeader';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faShareAlt } from '@fortawesome/free-solid-svg-icons';
 
 interface RoundResult {
   questionId: string;
@@ -121,8 +124,7 @@ const ResultsContent = () => {
   };
   const openSubmitModal = () => { setIsModalOpen(true); setSubmitMessage(''); };
   const closeSubmitModal = () => { setIsModalOpen(false); setPlayerName(''); };
-  const handleViewInstructions = () => router.push('/instructions');
-  const handleViewLeaderboard = () => router.push('/leaderboard');
+
   const handleSubmitToLeaderboard = async () => {
     if (!playerName.trim() || score === null) {
       setSubmitMessage('Vänligen ange ett namn och se till att poäng finns.');
@@ -142,11 +144,24 @@ const ResultsContent = () => {
     });
   };
 
-  const pageStyle: React.CSSProperties = { position: 'relative', backgroundColor: 'rgb(20, 16, 44)', color: 'white', minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' };
-  const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', width: '100%', maxWidth: '600px' };
-  const logoStyle: React.CSSProperties = { fontSize: '24px', fontWeight: 'bold' };
-  const iconsStyle: React.CSSProperties = { fontSize: '24px', display: 'flex', gap: '15px' };
-  const mainContentStyle: React.CSSProperties = { width: '100%', maxWidth: '600px', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', padding: '30px', borderRadius: '15px' };
+  const pageStyle: React.CSSProperties = {
+    position: 'relative',
+    backgroundColor: 'rgb(20, 16, 44)',
+    color: 'white',
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center'
+  };
+  const mainContentStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '600px',
+    textAlign: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: '30px',
+    borderRadius: '15px',
+    marginTop: '20px'
+  };
   const titleStyle: React.CSSProperties = { fontSize: '28px', fontWeight: 'bold', marginBottom: '20px' };
   const summaryContainerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-around', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' };
   const summaryBoxStyle: React.CSSProperties = { textAlign: 'center' };
@@ -179,15 +194,11 @@ const ResultsContent = () => {
 
   return (
     <div style={pageStyle}>
-      <header style={headerStyle}>
-        <div style={logoStyle}>Maestro</div>
-        <div style={iconsStyle}>
-          <span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span>
-          <span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span>
-        </div>
-      </header>
+      <NavigationHeader
+        title="Ditt Resultat"
+        backPath="/"
+      />
       <main style={mainContentStyle}>
-        <h1 style={titleStyle}>Ditt Resultat</h1>
         <div style={summaryContainerStyle}>
             <div style={summaryBoxStyle}> <p style={summaryLabelStyle}>Totalpoäng</p> <p style={scoreValueStyle}>{score}</p> </div>
             {avgDeviation !== null && ( <div style={summaryBoxStyle}> <p style={summaryLabelStyle}>Snittavvikelse</p> <p style={deviationValueStyle}>{avgDeviation} år</p> </div> )}
@@ -213,7 +224,16 @@ const ResultsContent = () => {
             </div>
         )}
         <div style={buttonContainerStyle}>
-          <button style={buttonStyle} onClick={handleShare}>Dela Resultat</button>
+          <button style={buttonStyle} onClick={handleShare}>
+            <FontAwesomeIcon
+              icon={faShareAlt}
+              style={{
+                marginRight: '8px',
+                fontSize: '16px'
+              }}
+            />
+            Dela Resultat
+          </button>
           <button style={buttonStyle} onClick={openSubmitModal}>Skicka till Topplistan</button>
         </div>
       </main>

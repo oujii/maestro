@@ -1,11 +1,37 @@
 'use client';
 
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import NavigationHeader from '@/components/NavigationHeader';
 
 const InstructionsPage = () => {
   const router = useRouter();
+  const [hasPlayedToday, setHasPlayedToday] = useState(false);
+
+  useEffect(() => {
+    checkQuizCompletion();
+  }, []);
+
+  const checkQuizCompletion = () => {
+    try {
+      const today = new Date().toLocaleString("en-CA", {
+        timeZone: "Europe/Stockholm",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).split('T')[0];
+
+      const playedKey = `maestroQuizPlayed_${today}`;
+      const hasPlayed = localStorage.getItem(playedKey) !== null;
+      setHasPlayedToday(hasPlayed);
+    } catch (error) {
+      console.error('Error checking quiz completion:', error);
+      setHasPlayedToday(false);
+    }
+  };
 
   // Styles
   const pageStyle: React.CSSProperties = {
@@ -13,32 +39,17 @@ const InstructionsPage = () => {
     backgroundColor: 'rgb(20, 16, 44)',
     color: 'white',
     minHeight: '100vh',
-    padding: '20px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center'
   };
 
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: '30px',
-    width: '100%',
-    maxWidth: '600px',
-    position: 'relative'
-  };
-
-  const logoStyle: React.CSSProperties = {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    textAlign: 'center'
-  };
-
   const mainContentStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: '600px',
-    textAlign: 'center'
+    textAlign: 'center',
+    padding: '20px',
+    paddingTop: '30px'
   };
 
   const titleStyle: React.CSSProperties = {
@@ -93,19 +104,14 @@ const InstructionsPage = () => {
     display: 'inline-block'
   };
 
-  const backLinkStyle: React.CSSProperties = {
-    color: 'rgba(255, 255, 255, 0.7)',
-    textDecoration: 'none',
-    marginTop: '20px',
-    display: 'inline-block',
-    fontSize: '16px'
-  };
+
 
   return (
     <div style={pageStyle}>
-      <header style={headerStyle}>
-        <div style={logoStyle}>Maestro Quiz</div>
-      </header>
+      <NavigationHeader
+        title="Instruktioner"
+        backPath="/"
+      />
       <main style={mainContentStyle}>
         <h1 style={titleStyle}>Hur man spelar</h1>
 
@@ -139,18 +145,14 @@ const InstructionsPage = () => {
           </ul>
         </div>
 
-        <button
-          style={buttonStyle}
-          onClick={() => router.push('/quiz')}
-        >
-          Starta Quizet
-        </button>
-
-        <div style={{marginTop: '20px'}}>
-          <Link href="/" style={backLinkStyle}>
-            ← Tillbaka till startsidan
-          </Link>
-        </div>
+        {!hasPlayedToday && (
+          <button
+            style={buttonStyle}
+            onClick={() => router.push('/quiz')}
+          >
+            Starta Quizet
+          </button>
+        )}
       </main>
     </div>
   );

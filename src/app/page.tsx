@@ -1,5 +1,7 @@
 // /Users/carl/Library/Application Support/Claude/maestro/maestro/src/app/page.tsx
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -8,25 +10,33 @@ interface YesterdayWinner {
   score: number;
 }
 
+type QuizState = 'not-started' | 'in-progress' | 'completed';
+
 async function getYesterdayWinner(): Promise<YesterdayWinner | null> {
   try {
-    // Använd svensk tidszon (Stockholm) för att få rätt datum
-    const stockholmTime = new Date().toLocaleString("en-CA", {
-      timeZone: "Europe/Stockholm",
-      year: "numeric",
-      month: "2-digit", 
-      day: "2-digit"
-    }); // Format: YYYY-MM-DD
-    
-    const todayInStockholm = new Date(stockholmTime + 'T00:00:00');
+    // Get current date in Stockholm timezone
+    const now = new Date();
+    const stockholmTime = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Stockholm',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+
+    // Parse today's date in Stockholm
+    const [year, month, day] = stockholmTime.split('-').map(Number);
+    const todayInStockholm = new Date(year, month - 1, day);
+
+    // Calculate yesterday
     const yesterdayInStockholm = new Date(todayInStockholm);
-    yesterdayInStockholm.setDate(todayInStockholm.getDate() - 1);
-    
+    yesterdayInStockholm.setDate(yesterdayInStockholm.getDate() - 1);
+
+    // Format dates as YYYY-MM-DD
     const yesterdayStr = yesterdayInStockholm.toISOString().slice(0, 10);
     const todayStr = todayInStockholm.toISOString().slice(0, 10);
-    
+
     console.log('=== Yesterday Winner Debug (Stockholm Time) ===');
-    console.log('Server time (UTC):', new Date().toISOString());
+    console.log('Server time (UTC):', now.toISOString());
     console.log('Stockholm time now:', stockholmTime);
     console.log('Today in Stockholm:', todayStr);
     console.log('Yesterday in Stockholm:', yesterdayStr);
@@ -57,24 +67,74 @@ async function getYesterdayWinner(): Promise<YesterdayWinner | null> {
   }
 }
 
-const HomePage = async () => {
-  const yesterdayWinner = await getYesterdayWinner();
-  
-  // Debug: Hämta alla unika datum från databasen
-  let allDates: string[] = [];
-  try {
-    const { data } = await supabase
-      .from('leaderboard')
-      .select('quiz_date')
-      .order('quiz_date', { ascending: false });
-    
-    if (data) {
-      allDates = [...new Set(data.map(item => item.quiz_date))].filter(Boolean);
-      console.log('All quiz dates in database:', allDates);
-    }
-  } catch (error) {
-    console.error('Error fetching all dates:', error);
-  }
+const HomePage = () => {
+  const [yesterdayWinner, setYesterdayWinner] = useState<YesterdayWinner | null>(null);
+  const [quizState, setQuizState] = useState<QuizState>('not-started');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasResults, setHasResults] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Get yesterday's winner
+      const winner = await getYesterdayWinner();
+      setYesterdayWinner(winner);
+
+      // Check quiz state and results
+      const today = new Date().toLocaleString("en-CA", {
+        timeZone: "Europe/Stockholm",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).split('T')[0];
+
+      const playedKey = `maestroQuizPlayed_${today}`;
+      const progressKey = `maestroQuizProgress_${today}`;
+
+      try {
+        // Check if quiz is completed
+        if (localStorage.getItem(playedKey)) {
+          setQuizState('completed');
+        } else {
+          // Check if quiz is in progress
+          const savedProgress = localStorage.getItem(progressKey);
+          if (savedProgress) {
+            try {
+              const progress = JSON.parse(savedProgress);
+              if (progress && typeof progress.currentQuestionIndex === 'number' &&
+                  Array.isArray(progress.roundResults) && progress.roundResults.length > 0) {
+                setQuizState('in-progress');
+              } else {
+                setQuizState('not-started');
+              }
+            } catch (e) {
+              setQuizState('not-started');
+            }
+          } else {
+            setQuizState('not-started');
+          }
+        }
+
+        // Check if user has any results to show
+        let foundResults = false;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('maestroQuizPlayed_')) {
+            foundResults = true;
+            break;
+          }
+        }
+        setHasResults(foundResults);
+      } catch (error) {
+        console.error('Error checking quiz state:', error);
+        setQuizState('not-started');
+        setHasResults(false);
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, []);
   // Styles
   const mainStyle: React.CSSProperties = {
     padding: '20px',
@@ -133,6 +193,28 @@ const HomePage = async () => {
     boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)'
   };
 
+  const compactButtonStyle: React.CSSProperties = {
+    padding: '12px 20px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: 'white',
+    textDecoration: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
+    transition: 'all 0.2s ease',
+    display: 'block',
+    textAlign: 'center',
+    flex: 1
+  };
+
+  const buttonRowStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: '10px',
+    width: '100%'
+  };
+
   const checkboxContainerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -171,12 +253,41 @@ const HomePage = async () => {
         Utmana dig själv och se hur bra du känner till musikhistorien!
       </p>
       <div style={buttonContainerStyle}>
-        <Link href="/quiz" style={primaryButtonStyle}>
-          Starta dagens quiz
-        </Link>
+        {/* Primary Action */}
+        {!isLoading && quizState !== 'completed' && (
+          <Link href="/quiz" style={primaryButtonStyle}>
+            {quizState === 'in-progress' ? 'Fortsätt quiz' : 'Starta dagens quiz'}
+          </Link>
+        )}
+        {quizState === 'completed' && (
+          <div style={{
+            ...primaryButtonStyle,
+            backgroundColor: 'rgba(100, 30, 150, 0.5)',
+            cursor: 'not-allowed',
+            textDecoration: 'none'
+          }}>
+            Quiz slutförd för idag
+          </div>
+        )}
+
+        {/* Secondary Actions */}
         <Link href="/instructions" style={secondaryButtonStyle}>
           Hur spelar man?
         </Link>
+
+        {/* Compact Button Row for Additional Actions */}
+        <div style={buttonRowStyle}>
+          {quizState === 'completed' && (
+            <Link href="/leaderboard" style={compactButtonStyle}>
+              Topplista
+            </Link>
+          )}
+          {hasResults && (
+            <Link href="/results" style={compactButtonStyle}>
+              Visa Resultat
+            </Link>
+          )}
+        </div>
       </div>
       
       {yesterdayWinner && (

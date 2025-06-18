@@ -6,6 +6,9 @@ import Confetti from 'react-confetti';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import MobileSlider from '../../components/MobileSlider';
+import NavigationHeader from '@/components/NavigationHeader';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faVolumeUp, faVolumeMute, faBullseye } from '@fortawesome/free-solid-svg-icons';
 import { searchDeezerTrack, getDeezerAlbumCover, getDeezerPreviewUrl, getYouTubeFallbackThumbnail } from '../../utils/deezer';
 
 interface Question {
@@ -60,6 +63,8 @@ const QuizPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeAudio, setActiveAudio] = useState<HTMLAudioElement | null>(null);
   const [autoPlayMusic, setAutoPlayMusic] = useState<boolean>(true);
+  const [showExitConfirmation, setShowExitConfirmation] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -108,6 +113,7 @@ const prevQuestionIndexRef = useRef<number | null>(null);
     // Skapa ett nytt Audio-element
     const manualAudio = new Audio(previewUrl);
     manualAudio.volume = 1.0;
+    manualAudio.muted = isMuted;
 
     // Lyssna på händelser
     manualAudio.oncanplaythrough = () => {
@@ -163,7 +169,7 @@ const prevQuestionIndexRef = useRef<number | null>(null);
       setActiveAudio(null);
     }
   }, [activeAudio]); // Removed currentQuestion from dependencies
-  // Läs inställningen för automatisk musikuppspelning från localStorage
+  // Läs inställningar från localStorage
   useEffect(() => {
     try {
       const savedAutoPlay = localStorage.getItem('maestroAutoPlayMusic');
@@ -171,8 +177,14 @@ const prevQuestionIndexRef = useRef<number | null>(null);
         setAutoPlayMusic(savedAutoPlay === 'true');
         console.log("Loaded autoplay setting:", savedAutoPlay === 'true');
       }
+
+      const savedMuted = localStorage.getItem('maestroAudioMuted');
+      if (savedMuted !== null) {
+        setIsMuted(savedMuted === 'true');
+        console.log("Loaded mute setting:", savedMuted === 'true');
+      }
     } catch (error) {
-      console.error("Error reading autoplay setting from localStorage:", error);
+      console.error("Error reading settings from localStorage:", error);
     }
   }, []);
 
@@ -650,6 +662,49 @@ const prevQuestionIndexRef = useRef<number | null>(null);
   const handleViewLeaderboard = () => router.push('/leaderboard');
   const handleViewInstructions = () => router.push('/instructions');
 
+  const handleExitQuiz = () => {
+    if (gameState === 'guessing' || gameState === 'feedback') {
+      setShowExitConfirmation(true);
+    } else {
+      router.push('/');
+    }
+  };
+
+  const confirmExitQuiz = () => {
+    // Stop any playing audio
+    if (activeAudio) {
+      activeAudio.pause();
+      setActiveAudio(null);
+    }
+    setShowExitConfirmation(false);
+    router.push('/');
+  };
+
+  const cancelExitQuiz = () => {
+    setShowExitConfirmation(false);
+  };
+
+  const toggleMute = () => {
+    if (activeAudio) {
+      activeAudio.muted = !isMuted;
+      setIsMuted(!isMuted);
+
+      // Save mute preference
+      try {
+        localStorage.setItem('maestroAudioMuted', (!isMuted).toString());
+      } catch (error) {
+        console.error('Error saving mute preference:', error);
+      }
+    } else {
+      setIsMuted(!isMuted);
+      try {
+        localStorage.setItem('maestroAudioMuted', (!isMuted).toString());
+      } catch (error) {
+        console.error('Error saving mute preference:', error);
+      }
+    }
+  };
+
 
 
   const pageStyle: React.CSSProperties = { 
@@ -777,7 +832,84 @@ const prevQuestionIndexRef = useRef<number | null>(null);
   const centeredMessageStyle : React.CSSProperties = { textAlign: 'center', marginTop: '50px', fontSize: '18px' };
 
   if (gameState === 'loading') return <div style={pageStyle}><p style={centeredMessageStyle}>Laddar quiz...</p></div>;
-  if (gameState === 'alreadyPlayed') return ( <div style={pageStyle}> <header style={headerStyle}><div style={logoStyle}>Maestro</div><div style={scoreStyle}></div><div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div></header> <main style={mainContentStyle}> <div style={centeredMessageStyle}> <h2 style={{...songTitleStyle, fontSize: '28px', marginBottom: '15px'}}>Redan spelat idag!</h2> <p style={{fontSize: '18px', color: 'rgba(255,255,255,0.9)', marginBottom: '30px' }}>Du har redan spelat dagens quiz. Välkommen tillbaka imorgon för nya utmaningar!</p> <button style={buttonStyle} onClick={handleViewLeaderboard}>Visa Leaderboard</button> </div> </main> </div> );
+  if (gameState === 'alreadyPlayed') return (
+    <div style={pageStyle}>
+      <NavigationHeader
+        title="Maestro"
+        backPath="/"
+      />
+      <main style={{
+        ...mainContentStyle,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        textAlign: 'center',
+        padding: '40px 20px'
+      }}>
+        <div style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '15px',
+          padding: '40px 30px',
+          maxWidth: '500px',
+          width: '100%'
+        }}>
+          <h2 style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
+            marginBottom: '20px',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px'
+          }}>
+            Redan spelat idag! <FontAwesomeIcon icon={faBullseye} />
+          </h2>
+          <p style={{
+            fontSize: '18px',
+            color: 'rgba(255,255,255,0.9)',
+            marginBottom: '30px',
+            lineHeight: '1.6'
+          }}>
+            Du har redan spelat dagens quiz. Välkommen tillbaka imorgon för nya utmaningar!
+          </p>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px',
+            maxWidth: '300px',
+            margin: '0 auto'
+          }}>
+            <button
+              style={{
+                ...buttonStyle,
+                width: '100%',
+                padding: '15px 30px',
+                fontSize: '16px'
+              }}
+              onClick={handleViewLeaderboard}
+            >
+              Visa Topplista
+            </button>
+            <button
+              style={{
+                ...buttonStyle,
+                width: '100%',
+                padding: '15px 30px',
+                fontSize: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+              onClick={() => router.push('/results')}
+            >
+              Visa Resultat
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
   if (gameState === 'noQuestions') return <div style={pageStyle}><p style={centeredMessageStyle}>Inga frågor hittades för dagens quiz. Försök igen imorgon!</p></div>;
   if (gameState === 'errorFetching') return <div style={pageStyle}><p style={{...centeredMessageStyle, color: 'red'}}>Kunde inte ladda frågor. Kontrollera din anslutning och försök igen.</p></div>;
   if (!currentQuestion) return <div style={pageStyle}><p style={centeredMessageStyle}>Väntar på fråga...</p></div>;
@@ -793,7 +925,48 @@ const prevQuestionIndexRef = useRef<number | null>(null);
          ref={audioRef}
          style={{ display: 'none' }}
        />
-       <header style={headerStyle}> <div style={logoStyle}>Maestro</div> <div style={scoreStyle}>Score: {score}</div> <div style={iconsStyle}><span onClick={handleViewInstructions} style={{cursor: 'pointer'}}>?</span><span onClick={handleViewLeaderboard} style={{cursor: 'pointer'}}>🏆</span></div> </header>
+       <NavigationHeader
+         title="Maestro"
+         customBackAction={handleExitQuiz}
+         showHomeButton={false}
+         rightContent={
+           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+             <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>
+               Score: {score}
+             </div>
+             {(gameState === 'guessing' || gameState === 'feedback') && (
+               <button
+                 style={{
+                   background: 'rgba(255, 255, 255, 0.1)',
+                   border: '1px solid rgba(255, 255, 255, 0.2)',
+                   borderRadius: '50%',
+                   width: '40px',
+                   height: '40px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   color: 'white',
+                   fontSize: '18px',
+                   cursor: 'pointer',
+                   transition: 'all 0.2s ease'
+                 }}
+                 onClick={toggleMute}
+                 title={isMuted ? 'Slå på ljud' : 'Stäng av ljud'}
+                 onMouseEnter={(e) => {
+                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                   e.currentTarget.style.transform = 'translateY(-1px)';
+                 }}
+                 onMouseLeave={(e) => {
+                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                   e.currentTarget.style.transform = 'translateY(0)';
+                 }}
+               >
+                 <FontAwesomeIcon icon={isMuted ? faVolumeMute : faVolumeUp} />
+               </button>
+             )}
+           </div>
+         }
+       />
        <main style={mainContentStyle}>
           {gameState === 'quizOver' ? ( /* Quiz Over View */
              <div style={guessSectionStyle}>
@@ -1083,7 +1256,70 @@ const prevQuestionIndexRef = useRef<number | null>(null);
           </>
         )}
         </main>
-          
+
+        {/* Exit Confirmation Modal */}
+        {showExitConfirmation && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'rgb(30, 20, 54)',
+              padding: '30px',
+              borderRadius: '15px',
+              width: '90%',
+              maxWidth: '400px',
+              textAlign: 'center',
+              color: 'white'
+            }}>
+              <h2 style={{ fontSize: '22px', marginBottom: '15px' }}>
+                Avsluta quiz?
+              </h2>
+              <p style={{ fontSize: '16px', marginBottom: '25px', color: 'rgba(255,255,255,0.8)' }}>
+                Ditt framsteg kommer att sparas och du kan fortsätta senare.
+              </p>
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                <button
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={cancelExitQuiz}
+                >
+                  Fortsätt spela
+                </button>
+                <button
+                  style={{
+                    backgroundColor: 'rgb(100, 30, 150)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={confirmExitQuiz}
+                >
+                  Avsluta
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
          {/* Fixed Control Section for Guessing */}
          {gameState === 'guessing' && (
            <div style={controlSectionStyle}>
@@ -1207,7 +1443,7 @@ const prevQuestionIndexRef = useRef<number | null>(null);
              </button>
            </div>
          )}
-        </div>
+      </div>
      );
 };
 
